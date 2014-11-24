@@ -150,6 +150,9 @@ class ElasticSearch(object):
         from invenio.modules.records.api import get_record
         record_as_dict = get_record(recid, reset_cache=True).dumps()
         del record_as_dict["__meta_metadata__"]
+        del record_as_dict["_id"]
+        collections = [val.values()[0]
+                       for val in record_as_dict["collections"]]
         return record_as_dict
 
     def index_records(self, recids, index=None, bulk_size=100000, **kwargs):
