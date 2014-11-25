@@ -1,4 +1,5 @@
-from invenio.ext.elasticsearch.backend import ElasticSearchWrapper
+from backend import ElasticSearchWrapper
+
 
 def index_record(sender, recid):
     """
@@ -11,6 +12,7 @@ def index_record(sender, recid):
     from .tasks import index_records
     return index_records.delay(sender, recid)
 
+
 def create_index(sender):
     """
     Create elasticsearch index
@@ -20,6 +22,7 @@ def create_index(sender):
     es = current_app.extensions.get("elasticsearch")
     es.create_index()
 
+
 def setup_app(app):
     """Set up the extension for the given app."""
     from es_query import process_es_query, process_es_results
@@ -27,6 +30,7 @@ def setup_app(app):
     es.set_query_handler(process_es_query)
     es.set_results_handler(process_es_results)
 
-    app.extensions["registry"]["packages"].register("invenio.ext.elasticsearch")
+    app.extensions["registry"]["packages"].register("invenio.\
+                                                     ext.elasticsearch")
     from invenio.base import signals
     signals.record_after_create.connect(index_record)

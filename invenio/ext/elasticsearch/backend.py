@@ -3,6 +3,7 @@ from pyelasticsearch import ElasticSearch as PyElasticSearch
 import json
 import search_logic
 
+
 class ElasticSearchWrapper(object):
 
     def __init__(self, app=None):
@@ -30,7 +31,8 @@ class ElasticSearchWrapper(object):
 
         Only one Registry per application is allowed.
         """
-        app.config.setdefault('ELASTICSEARCH_URL', 'http://188.184.141.134:9200/')
+        app.config.setdefault('ELASTICSEARCH_URL',
+                              'http://188.184.141.134:9200/')
         app.config.setdefault('ELASTICSEARCH_INDEX', "invenio_test")
         app.config.setdefault('ELASTICSEARCH_NUMBER_OF_SHARDS', 1)
         app.config.setdefault('ELASTICSEARCH_NUMBER_OF_REPLICAS', 0)
@@ -73,12 +75,6 @@ class ElasticSearchWrapper(object):
     @property
     def status(self):
         """The status of the ES cluster.
-
-        See: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/cluster-health.html
-        for more.
-
-        TODO: is it useful?
-
         :return: [string] possible values: green, yellow, red. green means all
           ok including replication, yellow means replication not active, red
           means partial results.
@@ -112,7 +108,6 @@ class ElasticSearchWrapper(object):
             return True
         except:
             return False
-
 
     def create_index(self, index=None):
         if index is None:
@@ -162,7 +157,7 @@ class ElasticSearchWrapper(object):
             return False
         try:
             self.connection.put_mapping(index=index, doc_type=doc_type,
-                                         mapping=type_mapping)
+                                        mapping=type_mapping)
         except:
             return False
         return True
@@ -172,14 +167,16 @@ class ElasticSearchWrapper(object):
             return []
         self.app.logger.info("Indexing: %d records for %s" % (len(docs),
                              doc_type))
+        refresh_flag = self.app.config.get("DEBUG")
         results = self.connection.bulk_index(index=index,
                                              doc_type=doc_type, docs=docs,
                                              id_field='_id',
-                                             refresh=self.app.config.get("DEBUG"))
+                                             refresh=refresh_flag)
         errors = []
         #for it in results.get("items"):
         #    if it.get("index").get("error"):
-        #        errors.append((it.get("index").get("_id"), it.get("index").get("error")))
+        #        errors.append((it.get("index").get("_id"),
+        #                       it.get("index").get("error")))
         return errors
 
     def _get_record(self, recid):
@@ -187,7 +184,8 @@ class ElasticSearchWrapper(object):
         record_as_dict = get_record(recid, reset_cache=True).dumps()
         del record_as_dict["__meta_metadata__"]
         del record_as_dict["_id"]
-        collections = [val.values()[0] if not isinstance(val.values[0], list) else v for v in val.values()[0]
+        #FIXME
+        collections = [val.values()[0]
                        for val in record_as_dict["collections"]]
         return record_as_dict
 
