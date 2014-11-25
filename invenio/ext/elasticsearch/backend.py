@@ -1,6 +1,7 @@
 from werkzeug.utils import cached_property
 from pyelasticsearch import ElasticSearch as PyElasticSearch
 import json
+import search_logic
 
 class ElasticSearchWrapper(object):
 
@@ -224,3 +225,23 @@ class ElasticSearchWrapper(object):
         errors += self._bulk_index_docs(docs, doc_type=doc_type, index=index)
         return errors
 
+    def search(self, query, index=None, filters=None):
+        """ query: the users' query
+            index: where to search
+            filters: a dictionary of filters eg {"collections": "ARTICLE"}
+        """
+        # Create the elasticsearch query
+        dsl_query = search_logic.get_dsl_query(query)
+
+        # filter by collection
+        if collection:
+            dsl_query = search_logic.apply_filter(dsl_query, filters)
+
+        # based on query define where to search, eg full text or records
+        doc_type = search_logic.get_doc_type(query)
+
+        resuls = self.connection.search(query, index=index, doc_type=doc_type)
+
+        view_results = search_logic.process_results(results)
+
+        return view_results
