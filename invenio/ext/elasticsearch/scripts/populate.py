@@ -26,8 +26,8 @@ class Populate(object):
             "type": "string",
             "index": "not_analyzed"
         }
-        mapping["records"]["properties"]["auhtors"] = {"type": "nested"}
-        mapping["records"]["properties"]["auhtors"] = {
+        mapping["records"]["properties"]["authors"] = {"type": "nested"}
+        mapping["records"]["properties"]["authors"] = {
             "properties": {
                 "first_name": {
                     "type": "string"
@@ -79,7 +79,7 @@ class Populate(object):
 def main():
     client = Populate(URL)
     client.create_index()
-    client.bulk_drive()
+    #client.bulk_drive()
 
 if __name__ == '__main__':
     main()

@@ -28,9 +28,9 @@ def index_records(sender, recid):
     from flask import current_app
     current_app.extensions.get("elasticsearch").index_records([recid])
     #TODO: get_text seems async should be replaced by a signal?
-    import time
-    time.sleep(1)
-    current_app.extensions.get("elasticsearch").index_documents([recid])
+    #import time
+    #time.sleep(1)
+    #current_app.extensions.get("elasticsearch").index_documents([recid])
 
 
 @celery.task
