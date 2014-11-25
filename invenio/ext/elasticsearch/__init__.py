@@ -47,14 +47,13 @@ class ElasticSearch(object):
         Only one Registry per application is allowed.
         """
         app.config.setdefault('ELASTICSEARCH_URL', 'http://188.184.141.134:9200/')
-        app.config.setdefault('ELASTICSEARCH_INDEX', "invenio")
+        app.config.setdefault('ELASTICSEARCH_INDEX', "invenio_test")
         app.config.setdefault('ELASTICSEARCH_NUMBER_OF_SHARDS', 1)
         app.config.setdefault('ELASTICSEARCH_NUMBER_OF_REPLICAS', 0)
         app.config.setdefault('ELASTICSEARCH_DATE_DETECTION', False)
         app.config.setdefault('ELASTICSEARCH_NUMERIC_DETECTION', False)
         app.config.setdefault('ELASTICSEARCH_ANALYSIS', {
             "default": {"type": "simple"}})
-        app.config.setdefault('CFG_MAPPING_PATH', "config/mapping.cfg")
         # Follow the Flask guidelines on usage of app.extensions
         if not hasattr(app, 'extensions'):
             app.extensions = {}
@@ -163,14 +162,15 @@ class ElasticSearch(object):
             #create mappings for each type
 
             #mapping for records
-            self.create_mapping(index, self.app.config['records'])
+            self.create_mapping(index, self.records_doc_type)
             return True
         except:
+            raise
             return False
 
     def create_mapping(self, index, doc_type):
-        with open(self.app.config['CFG_MAPPING_PATH']) as mf:
-            mapping_cfg = json.loads(mf.read())
+        from invenio.ext.elasticsearch.config import mapping
+        mapping_cfg = mapping.mappings
         try:
             type_mapping = {str(doc_type): mapping_cfg.get(doc_type)}
         except KeyError:
