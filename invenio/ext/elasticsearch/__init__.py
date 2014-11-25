@@ -1,6 +1,6 @@
 from werkzeug.utils import cached_property
 from pyelasticsearch import ElasticSearch as PyElasticSearch
-
+import json
 
 class ElasticSearch(object):
 
@@ -46,7 +46,7 @@ class ElasticSearch(object):
 
         Only one Registry per application is allowed.
         """
-        app.config.setdefault('ELASTICSEARCH_URL', 'http://localhost:9200/')
+        app.config.setdefault('ELASTICSEARCH_URL', 'http://188.184.141.134:9200/')
         app.config.setdefault('ELASTICSEARCH_INDEX', "invenio")
         app.config.setdefault('ELASTICSEARCH_NUMBER_OF_SHARDS', 1)
         app.config.setdefault('ELASTICSEARCH_NUMBER_OF_REPLICAS', 0)
@@ -54,7 +54,7 @@ class ElasticSearch(object):
         app.config.setdefault('ELASTICSEARCH_NUMERIC_DETECTION', False)
         app.config.setdefault('ELASTICSEARCH_ANALYSIS', {
             "default": {"type": "simple"}})
-
+        app.config.setdefault('CFG_MAPPING_PATH', "config/mapping.cfg")
         # Follow the Flask guidelines on usage of app.extensions
         if not hasattr(app, 'extensions'):
             app.extensions = {}
@@ -131,6 +131,58 @@ class ElasticSearch(object):
             return False
 
 
+    def create_index(self, index=None):
+        if index is None:
+            index = self.app.config['ELASTICSEARCH_INDEX']
+        if self.index_exists(index=index):
+            return True
+        try:
+            #create index
+            index_settings = {
+                #should be set to 1 for exact facet count
+                "number_of_shards":
+                self.app.config['ELASTICSEARCH_NUMBER_OF_SHARDS'],
+
+                #in case of primary shard failed
+                "number_of_replicas":
+                self.app.config['ELASTICSEARCH_NUMBER_OF_REPLICAS'],
+
+                #disable automatic type detection
+                #that can cause errors depending of the indexing order
+                "date_detection":
+                self.app.config['ELASTICSEARCH_DATE_DETECTION'],
+                "numeric_detection":
+                self.app.config['ELASTICSEARCH_NUMERIC_DETECTION']
+            }
+            if self.app.config['ELASTICSEARCH_ANALYSIS']:
+                index_settings["analysis"] = \
+                    self.app.config['ELASTICSEARCH_ANALYSIS']
+
+            self.connection.create_index(index=index, settings=index_settings)
+
+            #create mappings for each type
+
+            #mapping for records
+            self.create_mapping(index, self.app.config['records'])
+            return True
+        except:
+            return False
+
+    def create_mapping(self, index, doc_type):
+        with open(self.app.config['CFG_MAPPING_PATH']) as mf:
+            mapping_cfg = json.loads(mf.read())
+        try:
+            type_mapping = {str(doc_type): mapping_cfg.get(doc_type)}
+        except KeyError:
+            print "No such doc_type in cfg"
+            return False
+        try:
+            self.connection.put_mapping(index=index, doc_type=doc_type,
+                                         mapping=type_mapping)
+        except:
+            return False
+        return True
+
     def _bulk_index_docs(self, docs, doc_type, index):
         if not docs:
             return []
@@ -141,9 +193,9 @@ class ElasticSearch(object):
                                              id_field='_id',
                                              refresh=self.app.config.get("DEBUG"))
         errors = []
-        for it in results.get("items"):
-            if it.get("index").get("error"):
-                errors.append((it.get("index").get("_id"), it.get("index").get("error")))
+        #for it in results.get("items"):
+        #    if it.get("index").get("error"):
+        #        errors.append((it.get("index").get("_id"), it.get("index").get("error")))
         return errors
 
     def _get_record(self, recid):
@@ -199,6 +251,15 @@ def index_record(sender, recid):
     """
     from .tasks import index_records
     return index_records.delay(sender, recid)
+
+def create_index(sender):
+    """
+    Create elasticsearch index
+    Configure mappings as found in mapping.cfg
+    """
+    from flask import current_app
+    es = current_app.extensions.get("elasticsearch")
+    es.create_index()
 
 def setup_app(app):
     """Set up the extension for the given app."""
