@@ -185,8 +185,8 @@ class ElasticSearchWrapper(object):
         from invenio.modules.records.api import get_record
         record_as_dict = get_record(recid, reset_cache=True).dumps()
         del record_as_dict["__meta_metadata__"]
-        del record_as_dict["_id"]
-        #FIXME
+        #del record_as_dict["_id"]
+        #FIXME handle mutliple collection types
         collections = [val.values()[0]
                        for val in record_as_dict["collections"]]
         return record_as_dict
