@@ -30,7 +30,7 @@ def setup_app(app):
     es.set_query_handler(process_es_query)
     es.set_results_handler(process_es_results)
 
-    app.extensions["registry"]["packages"].register("invenio.\
-                                                     ext.elasticsearch")
+    packages = app.extensions["registry"]["packages"]
+    packages.register("invenio.ext.elasticsearch")
     from invenio.base import signals
     signals.record_after_create.connect(index_record)

@@ -2,7 +2,7 @@ from werkzeug.utils import cached_property
 from pyelasticsearch import ElasticSearch as PyElasticSearch
 import json
 from search_logic import QueryHandler
-from confing import query_mapping
+from config import query_mapping
 
 class ElasticSearchWrapper(object):
 
@@ -35,7 +35,7 @@ class ElasticSearchWrapper(object):
         """
         app.config.setdefault('ELASTICSEARCH_URL',
                               'http://188.184.141.134:9200/')
-        app.config.setdefault('ELASTICSEARCH_INDEX', "invenio_test")
+        app.config.setdefault('ELASTICSEARCH_INDEX', "invenio")
         app.config.setdefault('ELASTICSEARCH_NUMBER_OF_SHARDS', 1)
         app.config.setdefault('ELASTICSEARCH_NUMBER_OF_REPLICAS', 0)
         app.config.setdefault('ELASTICSEARCH_DATE_DETECTION', False)
@@ -189,6 +189,8 @@ class ElasticSearchWrapper(object):
         #FIXME handle mutliple collection types
         collections = [val.values()[0]
                        for val in record_as_dict["collections"]]
+        record_as_dict['collections'] = collections
+        record_as_dict['title'] = record_as_dict['title']['title']
         return record_as_dict
 
     def index_records(self, recids, index=None, bulk_size=100000, **kwargs):
@@ -239,7 +241,7 @@ class ElasticSearchWrapper(object):
         # based on query define where to search, eg full text or records
         doc_type = self.query_handler.get_doc_type(query)
 
-        resuls = self.connection.search(query, index=index, doc_type=doc_type)
+        results = self.connection.search(query, index=index, doc_type=doc_type)
 
         view_results = self.query_handler.process_results(results)
 

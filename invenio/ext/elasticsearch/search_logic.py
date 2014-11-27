@@ -5,9 +5,9 @@ from pypeg2 import *
 
 class QueryHandler(object):
 
-    def __init__(self):
+    def __init__(self, fields_dict):
         self.astCreator = PypegConverter()
-        self.dslCreator = ASTtoDSLConverter()
+        self.dslCreator = ASTtoDSLConverter(fields_dict)
 
     def get_dsl_query(self, query):
         peg = parse(query, parser.Main, whitespace="")
