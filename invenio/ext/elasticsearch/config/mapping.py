@@ -22,7 +22,7 @@ mappings = {
                 "type": "string"
             },
             "authors": {
-                "type": "nested",
+                "type": "object",
                 "properties": {
                     "first_name": {
                         "type": "multi_field",
@@ -66,7 +66,7 @@ mappings = {
                 }
             },
             "_first_author": {
-                "type": "nested",
+                "type": "object",
                 "properties": {
                     "first_name": {
                         "type": "multi_field",
