@@ -2,7 +2,7 @@ from werkzeug.utils import cached_property
 from pyelasticsearch import ElasticSearch as PyElasticSearch
 import json
 from search_logic import QueryHandler
-
+from confing import query_mapping
 
 class ElasticSearchWrapper(object):
 
@@ -23,7 +23,7 @@ class ElasticSearchWrapper(object):
         self._recids_collections = {}
 
         # initiate the query handler
-        self.query_handler = QueryHandler()
+        self.query_handler = QueryHandler(query_mapping.fields)
         if app is not None:
             self.init_app(app)
 
