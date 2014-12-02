@@ -22,11 +22,16 @@ class QueryHandler(object):
         return "records"
 
 
-    def format_query(self, query, filters):
+    def format_query(self, query, filters=None):
         dsl_query = {"query": query}
         if filters:
-            # FIXME
-            pass
+            dsl_query = {"query": {
+                "filtered": {
+                    "query": query,
+                    "filter": filters
+                    }
+                }
+            }
         return dsl_query
 
 
