@@ -191,6 +191,10 @@ class ElasticSearchWrapper(object):
                        for val in record_as_dict["collections"]]
         record_as_dict['collections'] = collections
         record_as_dict['title'] = record_as_dict['title']['title']
+        # get full text if any
+        from invenio.legacy.bibdocfile.api import BibRecDocs
+        text = BibRecDocs(recid).get_text(True)
+        record_as_dict['fulltext'] = text
         return record_as_dict
 
     def index_records(self, recids, index=None, bulk_size=100000, **kwargs):

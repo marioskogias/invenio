@@ -108,7 +108,11 @@ mappings = {
                         }
                     }
                 }
-            }
+            },
+            "fulltext": {
+                "type": "string",
+                "include_in_all": false
+                }
         }
     }
 }
