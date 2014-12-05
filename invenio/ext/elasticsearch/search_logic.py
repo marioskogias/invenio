@@ -3,6 +3,7 @@ from invenio_query_parser.walkers.ast_to_dsl import ASTtoDSLConverter
 from invenio_query_parser import parser
 from pypeg2 import *
 
+
 class QueryHandler(object):
 
     def __init__(self, fields_dict):
@@ -17,10 +18,9 @@ class QueryHandler(object):
 
     def get_doc_type(self, query):
         """For now on only records
-           In the future full text as well
+            Do we need more types?
         """
-        return "records"
-
+        pass
 
     def format_query(self, query, filters=None):
         dsl_query = {"query": query}
@@ -34,6 +34,9 @@ class QueryHandler(object):
             }
         return dsl_query
 
+    def process_query(self, query, filters):
+        dsl_query = self.get_dsl_query(query)
+        return self.format_query(dsl_query, filters)
 
     def process_results(self, results):
         return results

@@ -1,4 +1,6 @@
 from backend import ElasticSearchWrapper
+from config import query_mapping
+from search_logic import QueryHandler
 
 
 def index_record(sender, recid):
@@ -27,8 +29,11 @@ def setup_app(app):
     """Set up the extension for the given app."""
     from es_query import process_es_query, process_es_results
     es = ElasticSearchWrapper(app)
-    es.set_query_handler(process_es_query)
-    es.set_results_handler(process_es_results)
+
+    # initiate the query handler
+    es.query_handler = QueryHandler(query_mapping.fields)
+    es.set_query_handler(es.query_handler.process_query)
+    es.set_results_handler(es.query_handler.process_results)
 
     packages = app.extensions["registry"]["packages"]
     packages.register("invenio.ext.elasticsearch")

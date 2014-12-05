@@ -1,8 +1,7 @@
 from werkzeug.utils import cached_property
 from pyelasticsearch import ElasticSearch as PyElasticSearch
 import json
-from search_logic import QueryHandler
-from config import query_mapping
+
 
 class ElasticSearchWrapper(object):
 
@@ -10,20 +9,9 @@ class ElasticSearchWrapper(object):
         """Build the extension object."""
         self.app = app
 
-        #default process functions
-        self.process_query = lambda x: x
-        self.process_results = lambda x: x
-
         # TODO: to put in config?
         self.records_doc_type = "records"
-        self.documents_doc_type = "documents"
-        self.collections_doc_type = "collections"
 
-        # to cache recids collections
-        self._recids_collections = {}
-
-        # initiate the query handler
-        self.query_handler = QueryHandler(query_mapping.fields)
         if app is not None:
             self.init_app(app)
 
@@ -49,7 +37,6 @@ class ElasticSearchWrapper(object):
             raise Exception("Flask application already initialized")
 
         app.extensions['elasticsearch'] = self
-        self.app = app
 
     @cached_property
     def connection(self):
@@ -231,22 +218,17 @@ class ElasticSearchWrapper(object):
         errors += self._bulk_index_docs(docs, doc_type=doc_type, index=index)
         return errors
 
-    def search(self, query, index=None, filters=None):
+    def search(self, query, index="invenio", doc_type="records", filters=None):
         """ query: the users' query
             index: where to search
             filters: a dictionary of filters eg {"collections": "ARTICLE"}
         """
-        # Create the elasticsearch query
-        dsl_query = self.query_handler.get_dsl_query(query)
 
-        # format query and apply filters eg collections
-        dsl_query = self.query_handler.format_query(dsl_query, filters)
-
-        # based on query define where to search, eg full text or records
-        doc_type = self.query_handler.get_doc_type(query)
+        # create elasticsearch query
+        dsl_query = self.process_query(query, filters)
 
         results = self.connection.search(query, index=index, doc_type=doc_type)
 
-        view_results = self.query_handler.process_results(results)
+        view_results = self.process_results(results)
 
         return view_results
