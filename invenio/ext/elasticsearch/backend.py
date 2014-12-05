@@ -227,8 +227,8 @@ class ElasticSearchWrapper(object):
         # create elasticsearch query
         dsl_query = self.process_query(query, filters)
 
-        results = self.connection.search(query, index=index, doc_type=doc_type)
+        results = self.connection.search(dsl_query, index=index,
+                                         doc_type=doc_type)
 
         view_results = self.process_results(results)
-
         return view_results

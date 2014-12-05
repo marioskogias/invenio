@@ -32,6 +32,7 @@ class QueryHandler(object):
                     }
                 }
             }
+        print dsl_query
         return dsl_query
 
     def process_query(self, query, filters):
