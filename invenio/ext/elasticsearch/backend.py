@@ -11,6 +11,7 @@ class ElasticSearchWrapper(object):
 
         # TODO: to put in config?
         self.records_doc_type = "records"
+        self.documents_doc_type = "documents"
 
         if app is not None:
             self.init_app(app)
@@ -131,6 +132,9 @@ class ElasticSearchWrapper(object):
 
             #mapping for records
             self.create_mapping(index, self.records_doc_type)
+
+            #mapping for documents
+            self.create_mapping(index, self.documents_doc_type)
             return True
         except:
             raise
@@ -184,6 +188,22 @@ class ElasticSearchWrapper(object):
         record_as_dict['fulltext'] = text
         return record_as_dict
 
+    def _get_text(self, recid):
+        from invenio.legacy.bibdocfile.api import BibRecDocs
+        documents = BibRecDocs(recid).list_bibdocs()
+
+        document_list = []
+        for d in documents:
+            doc = {
+                "fulltext": d.get_text(),
+                "recid": recid,
+                "_parent": recid
+                }
+            document_list.append(doc)
+        if not document_list:
+            self.app.logger.debug("No text for:%s" % recid)
+        return document_list
+
     def index_records(self, recids, index=None, bulk_size=100000, **kwargs):
         """Index bibliographic records.
 
@@ -204,16 +224,37 @@ class ElasticSearchWrapper(object):
         return self._index_docs(recids, self.records_doc_type, index,
                                 bulk_size, self._get_record)
 
+    def index_documents(self, recids, index=None, bulk_size=100000, **kwargs):
+        """Index fulltext files.
+           Put the fullext extracted by Invenio into the given index.
+           :param recids: [list of int] recids to index
+           :param index: [string] index name
+           :param bulk_size: [int] batch size to index
+           :return: [list of int] list of recids not indexed due to errors
+        """
+        if index is None:
+            index = self.app.config['ELASTICSEARCH_INDEX']
+        # recids_to_index = filter(self._documents_has_been_updated, recids)
+        # FIXME
+        recids_to_index = recids
+        if recids_to_index:
+            self.app.logger.debug("Indexing document for %s" % recids)
+        return self._index_docs(recids_to_index, self.documents_doc_type, index,
+                bulk_size, self._get_text)
+
     def _index_docs(self, recids, doc_type, index, bulk_size, get_docs):
         docs = []
         errors = []
         for recid in recids:
             doc = get_docs(recid)
             if doc:
-                docs.append(doc)
+                if isinstance(doc, list):
+                    docs.extend(doc)
+                else:
+                    docs.append(doc)
             if len(docs) >= bulk_size:
                 errors += self._bulk_index_docs(docs, doc_type=doc_type,
-                                                index=index)
+                        index=index)
                 docs = []
         errors += self._bulk_index_docs(docs, doc_type=doc_type, index=index)
         return errors

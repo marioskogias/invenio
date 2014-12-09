@@ -111,7 +111,20 @@ mappings = {
             },
             "fulltext": {
                 "type": "string",
-                "include_in_all": false
+                "include_in_all": False
+                }
+        }
+    },
+    "documents": {
+        "_parent": {"type": "records"},
+        "properties": {
+            "fulltext": {
+                "type": "string",
+                "index": "analyzed"
+                },
+            "recid": {
+                "type": "integer",
+                "index": "not_analyzed"
                 }
         }
     }
