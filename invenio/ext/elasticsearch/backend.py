@@ -259,17 +259,18 @@ class ElasticSearchWrapper(object):
         errors += self._bulk_index_docs(docs, doc_type=doc_type, index=index)
         return errors
 
-    def search(self, query, index="invenio", doc_type="records", filters=None):
+    def search(self, query, index="invenio", doc_type="records", filters=None,
+               facet_filters=None):
         """ query: the users' query
             index: where to search
             filters: a dictionary of filters eg {"collections": "ARTICLE"}
         """
 
         # create elasticsearch query
-        dsl_query = self.process_query(query, filters)
+        dsl_query = self.query_handler.process_query(query, filters)
 
         results = self.connection.search(dsl_query, index=index,
                                          doc_type=doc_type)
 
-        view_results = self.process_results(results)
+        view_results = self.results_handler.process_results(results)
         return view_results

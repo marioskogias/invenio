@@ -1,6 +1,7 @@
 from backend import ElasticSearchWrapper
 from config import query_mapping
-from search_logic import QueryHandler
+from query_handler import QueryHandler
+from results_handler import ResultsHandler
 
 
 def index_record(sender, recid):
@@ -25,17 +26,32 @@ def create_index(sender):
     es.create_index()
 
 
+def drop_index(sender):
+    """
+    Create elasticsearch index
+    Configure mappings as found in mapping.cfg
+    """
+    from flask import current_app
+    es = current_app.extensions.get("elasticsearch")
+    es.delete_index()
+
+
 def setup_app(app):
     """Set up the extension for the given app."""
-    from es_query import process_es_query, process_es_results
     es = ElasticSearchWrapper(app)
 
     # initiate the query handler
     es.query_handler = QueryHandler(query_mapping.fields)
-    es.set_query_handler(es.query_handler.process_query)
-    es.set_results_handler(es.query_handler.process_results)
+
+    # initiate the results handler
+    es.results_handler = ResultsHandler()
 
     packages = app.extensions["registry"]["packages"]
     packages.register("invenio.ext.elasticsearch")
     from invenio.base import signals
     signals.record_after_create.connect(index_record)
+    from invenio.base.scripts.database import recreate, drop, create
+    signals.pre_command.connect(drop_index, sender=drop)
+    signals.post_command.connect(create_index, sender=create)
+    signals.pre_command.connect(drop_index, sender=recreate)
+    signals.post_command.connect(create_index, sender=recreate)

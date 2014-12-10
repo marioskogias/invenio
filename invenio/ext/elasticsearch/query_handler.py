@@ -38,6 +38,3 @@ class QueryHandler(object):
     def process_query(self, query, filters):
         dsl_query = self.get_dsl_query(query)
         return self.format_query(dsl_query, filters)
-
-    def process_results(self, results):
-        return results
