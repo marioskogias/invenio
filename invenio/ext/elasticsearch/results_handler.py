@@ -33,10 +33,6 @@ class Facets(UserDict):
     """Facet response objects."""
     def __init__(self, data):
         """New Facets instance."""
-        print "\n\n\n\n"
-        print data
-        print "The data facets are " + str(data.get("aggregations"))
-        print "\n\n\n\n"
         UserDict.__init__(self, data.get("aggregations"))
 
 class Highlights(UserDict):
@@ -52,6 +48,9 @@ class Highlights(UserDict):
                 new_data[int(hit.get('_id'))] = hit.get("highlight")
             else:
                 new_data[int(hit.get('_id'))] = {}
+        print "\n\n\n"
+        print new_data
+        print "\n\n\n"
         UserDict.__init__(self, new_data)
 
 
