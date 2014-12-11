@@ -32,6 +32,15 @@ class QueryHandler(object):
                     }
                 }
             }
+
+        # apply aggegation for facets
+        dsl_query["aggs"] = {
+            "collections": {
+                "terms": {
+                    "field": "collections"
+                 }
+            }
+        }
         print dsl_query
         return dsl_query
 

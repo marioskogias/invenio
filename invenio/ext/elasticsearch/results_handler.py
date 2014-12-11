@@ -33,6 +33,10 @@ class Facets(UserDict):
     """Facet response objects."""
     def __init__(self, data):
         """New Facets instance."""
+        print "\n\n\n\n"
+        print data
+        print "The data facets are " + str(data.get("aggregations"))
+        print "\n\n\n\n"
         UserDict.__init__(self, data.get("aggregations"))
 
 class Highlights(UserDict):
