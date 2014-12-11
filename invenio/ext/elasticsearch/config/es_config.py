@@ -49,18 +49,18 @@ mappings = {
                                 "type": "string",
                                 "index": "not_analyzed"
                             }
-                        },
-                        "full_name": {
-                            "type": "multi_field",
-                            "fields": {
-                                "full_name": {
-                                    "type": "string",
-                                    "index": "analyzed"
-                                },
-                                "raw": {
-                                    "type": "string",
-                                    "index": "not_analyzed"
-                                }
+                        }
+                    },
+                    "full_name": {
+                        "type": "multi_field",
+                        "fields": {
+                            "full_name": {
+                                "type": "string",
+                                "index": "analyzed"
+                            },
+                            "raw": {
+                                "type": "string",
+                                "index": "not_analyzed"
                             }
                         }
                     }
@@ -93,27 +93,23 @@ mappings = {
                                 "type": "string",
                                 "index": "not_analyzed"
                             }
-                        },
-                        "full_name": {
-                            "type": "multi_field",
-                            "fields": {
-                                "full_name": {
-                                    "type": "string",
-                                    "index": "analyzed"
-                                },
-                                "raw": {
-                                    "type": "string",
-                                    "index": "not_analyzed"
-                                }
+                        }
+                    },
+                    "full_name": {
+                        "type": "multi_field",
+                        "fields": {
+                            "full_name": {
+                                "type": "string",
+                                "index": "analyzed"
+                            },
+                            "raw": {
+                                "type": "string",
+                                "index": "not_analyzed"
                             }
                         }
                     }
                 }
-            },
-            "fulltext": {
-                "type": "string",
-                "include_in_all": False
-                }
+            }
         }
     },
     "documents": {
