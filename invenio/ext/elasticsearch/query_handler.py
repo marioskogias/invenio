@@ -1,5 +1,5 @@
 from invenio_query_parser.walkers.pypeg_to_ast import PypegConverter
-from invenio_query_parser.walkers.ast_to_dsl import ASTtoDSLConverter
+from ast_to_dsl import ASTtoDSLConverter
 from invenio_query_parser import parser
 from pypeg2 import *
 
