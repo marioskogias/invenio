@@ -1,3 +1,4 @@
+# Configure the elasticsearch mappings for each type
 mappings = {
     "records": {
         "properties": {
@@ -126,6 +127,20 @@ mappings = {
                 "type": "integer",
                 "index": "not_analyzed"
                 }
+        }
+    }
+}
+
+# Configure the aggegations used for UI facets
+aggs = {
+    "Collections": {
+        "terms": {
+            "field": "collections"
+        }
+    },
+    "Author Name": {
+        "terms": {
+            "field": "_first_author.full_name.raw"
         }
     }
 }

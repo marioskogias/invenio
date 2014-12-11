@@ -1,14 +1,16 @@
 from invenio_query_parser.walkers.pypeg_to_ast import PypegConverter
-from ast_to_dsl import ASTtoDSLConverter
 from invenio_query_parser import parser
+from ast_to_dsl import ASTtoDSLConverter
+from config import es_config
+from config import query_mapping
 from pypeg2 import *
 
 
 class QueryHandler(object):
 
-    def __init__(self, fields_dict):
+    def __init__(self):
         self.astCreator = PypegConverter()
-        self.dslCreator = ASTtoDSLConverter(fields_dict)
+        self.dslCreator = ASTtoDSLConverter(query_mapping.fields)
 
     def get_dsl_query(self, query):
         peg = parse(query, parser.Main, whitespace="")
@@ -34,14 +36,7 @@ class QueryHandler(object):
             }
 
         # apply aggegation for facets
-        dsl_query["aggs"] = {
-            "collections": {
-                "terms": {
-                    "field": "collections"
-                 }
-            }
-        }
-        print dsl_query
+        dsl_query["aggs"] = es_config.aggs
         return dsl_query
 
     def process_query(self, query, filters):

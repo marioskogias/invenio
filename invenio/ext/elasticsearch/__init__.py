@@ -1,5 +1,4 @@
 from backend import ElasticSearchWrapper
-from config import query_mapping
 from query_handler import QueryHandler
 from results_handler import ResultsHandler
 
@@ -41,7 +40,7 @@ def setup_app(app):
     es = ElasticSearchWrapper(app)
 
     # initiate the query handler
-    es.query_handler = QueryHandler(query_mapping.fields)
+    es.query_handler = QueryHandler()
 
     # initiate the results handler
     es.results_handler = ResultsHandler()

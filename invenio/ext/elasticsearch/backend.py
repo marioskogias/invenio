@@ -141,8 +141,8 @@ class ElasticSearchWrapper(object):
             return False
 
     def create_mapping(self, index, doc_type):
-        from invenio.ext.elasticsearch.config import mapping
-        mapping_cfg = mapping.mappings
+        from invenio.ext.elasticsearch.config import es_config
+        mapping_cfg = es_config.mappings
         try:
             type_mapping = {str(doc_type): mapping_cfg.get(doc_type)}
         except KeyError:
