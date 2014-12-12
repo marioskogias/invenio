@@ -27,13 +27,13 @@ class ASTtoDSLConverter(object):
         """
         l = self.map_keyword_to_fields(keyword.value)
         if keyword.value == "fulltext":
-            child_dict = {
-                "has_child": {
-                    "type": "documents",
+            nested_dict = {
+                "nested": {
+                    "path": "documents",
                     "query": value(l)
                     }
                 }
-            return child_dict
+            return nested_dict
         return value(l)
 
     @visitor(ast.AndOp)

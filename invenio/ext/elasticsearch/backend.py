@@ -172,33 +172,40 @@ class ElasticSearchWrapper(object):
         #                       it.get("index").get("error")))
         return errors
 
-    def _get_record(self, recid):
-        from invenio.modules.records.api import get_record
-        record_as_dict = get_record(recid, reset_cache=True).dumps()
-        del record_as_dict["__meta_metadata__"]
+    def enhance_rec_content(self, record):
+        """Add remove fields from the record to be stored in elasticsearch"""
+        del record["__meta_metadata__"]
         #del record_as_dict["_id"]
         #FIXME handle mutliple collection types
         collections = [val.values()[0]
-                       for val in record_as_dict["collections"]]
-        record_as_dict['collections'] = collections
-        record_as_dict['title'] = record_as_dict['title']['title']
+                       for val in record["collections"]]
+        record['collections'] = collections
+        record['title'] = record['title']['title']
+        record['abstract'] = record['abstract']['summary']
         # get full text if any
-        from invenio.legacy.bibdocfile.api import BibRecDocs
-        text = BibRecDocs(recid).get_text(True)
-        record_as_dict['fulltext'] = text
-        return record_as_dict
+        record['documents'] = self._get_text(record["_id"])
+        return record
+
+    def _get_record(self, recid):
+        from invenio.modules.records.api import get_record
+        record_as_dict = get_record(recid, reset_cache=True).dumps()
+        enhanced_record = self.enhance_rec_content(record_as_dict)
+        return enhanced_record
 
     def _get_text(self, recid):
+        """Return a list of dictionaries with filename and fulltext"""
         from invenio.legacy.bibdocfile.api import BibRecDocs
-        documents = BibRecDocs(recid).list_bibdocs()
+        bibrecdocs = BibRecDocs(recid)
+
+        bibrecdocs.get_text() # this creates the content for each text file
+        documents = bibrecdocs.list_bibdocs_by_names()
 
         document_list = []
-        for d in documents:
+        for k,v in documents.iteritems():
             doc = {
-                "fulltext": d.get_text(),
-                "recid": recid,
-                "_parent": recid
-                }
+                "fulltext": v.get_text(),
+                "filename": k
+            }
             document_list.append(doc)
         if not document_list:
             self.app.logger.debug("No text for:%s" % recid)

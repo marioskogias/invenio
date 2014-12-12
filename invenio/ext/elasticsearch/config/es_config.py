@@ -109,7 +109,22 @@ mappings = {
                         }
                     }
                 }
+            },
+            "documents": {
+                "type": "nested",
+                "include_in_all": False,
+                "properties": {
+                    "fulltext": {
+                        "type": "string",
+                        "index": "analyzed"
+                    },
+                    "file_name": {
+                        "type": "integer",
+                        "index": "analyzed"
+                    }
+                }
             }
+
         }
     },
     "documents": {
@@ -140,3 +155,13 @@ aggs = {
         }
     }
 }
+
+# Configure fields for highlighting
+highlight = {
+    "fields": {
+        "abstract.summary": {}
+    }
+}
+
+# Configure if the source should be returned or not
+should_return_source = False

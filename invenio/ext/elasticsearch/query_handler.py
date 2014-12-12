@@ -37,11 +37,8 @@ class QueryHandler(object):
 
         # apply aggegation for facets
         dsl_query["aggs"] = es_config.aggs
-        dsl_query["highlight"] = {
-            "fields": {
-                "abstract.summary": {}
-            }
-        }
+        dsl_query["highlight"] = es_config.highlight
+        dsl_query["_source"] = es_config.should_return_source
         print "\n\n\n\n"
         print dsl_query
         print "\n\n\n\n"
@@ -49,4 +46,5 @@ class QueryHandler(object):
 
     def process_query(self, query, filters):
         dsl_query = self.get_dsl_query(query)
+        doc_type = self.get_doc_type(dsl_query)
         return self.format_query(dsl_query, filters)
