@@ -24,13 +24,23 @@ class QueryHandler(object):
         """
         pass
 
+    def format_filters(self, filters):
+        """Accepts a list of dictionaries
+           Each dictionary is a filter
+           At first only term filters are supported
+        """
+        f = lambda x: {"term": x}
+        filters = map(f, filters)
+        res = {"bool": {"must": filters}}
+        return res
+
     def format_query(self, query, filters=None):
         dsl_query = {"query": query}
         if filters:
             dsl_query = {"query": {
                 "filtered": {
                     "query": query,
-                    "filter": filters
+                    "filter": self.format_filters(filters)
                     }
                 }
             }

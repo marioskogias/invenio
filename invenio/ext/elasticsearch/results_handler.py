@@ -48,9 +48,6 @@ class Highlights(UserDict):
                 new_data[int(hit.get('_id'))] = hit.get("highlight")
             else:
                 new_data[int(hit.get('_id'))] = {}
-        print "\n\n\n"
-        print new_data
-        print "\n\n\n"
         UserDict.__init__(self, new_data)
 
 

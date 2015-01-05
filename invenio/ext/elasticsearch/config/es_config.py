@@ -149,7 +149,7 @@ aggs = {
             "field": "collections"
         }
     },
-    "Author Name": {
+    "Author": {
         "terms": {
             "field": "_first_author.full_name.raw"
         }

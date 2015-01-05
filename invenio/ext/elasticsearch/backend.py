@@ -181,7 +181,7 @@ class ElasticSearchWrapper(object):
                        for val in record["collections"]]
         record['collections'] = collections
         record['title'] = record['title']['title']
-        record['abstract'] = record['abstract']['summary']
+        #record['abstract'] = record['abstract']['summary']
         # get full text if any
         record['documents'] = self._get_text(record["_id"])
         return record
@@ -266,8 +266,7 @@ class ElasticSearchWrapper(object):
         errors += self._bulk_index_docs(docs, doc_type=doc_type, index=index)
         return errors
 
-    def search(self, query, index="invenio", doc_type="records", filters=None,
-               facet_filters=None):
+    def search(self, query, index="invenio", doc_type="records", filters=None):
         """ query: the users' query
             index: where to search
             filters: a dictionary of filters eg {"collections": "ARTICLE"}
