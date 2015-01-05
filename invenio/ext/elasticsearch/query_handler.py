@@ -14,7 +14,7 @@ class QueryHandler(object):
 
     def get_dsl_query(self, query):
         if query == "*":  # this is what the UI returns FIXME
-            return { "match_all": { }   }
+            return {"match_all": {}}
         peg = parse(query, parser.Main, whitespace="")
         ast = peg.accept(self.astCreator)
         dsl_query = ast.accept(self.dslCreator)

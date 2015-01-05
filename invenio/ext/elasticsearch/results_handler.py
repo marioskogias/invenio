@@ -1,5 +1,6 @@
 from UserDict import UserDict
 
+
 class Response(object):
     """An Invenio response object.
     Contains, Hits, Facet results and Higlights.
@@ -10,6 +11,7 @@ class Response(object):
         self.hits = Hits(data)
         self.facets = Facets(data)
         self.highlights = Highlights(data)
+
 
 class Hits(object):
     """Iterator over all recids that matched the query."""
@@ -29,11 +31,13 @@ class Hits(object):
         """Number of elements."""
         return self.data['total']
 
+
 class Facets(UserDict):
     """Facet response objects."""
     def __init__(self, data):
         """New Facets instance."""
         UserDict.__init__(self, data.get("aggregations"))
+
 
 class Highlights(UserDict):
     """Hightlights response objects."""

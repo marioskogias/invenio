@@ -16,7 +16,7 @@ class ASTtoDSLConverter(object):
 
     def map_keyword_to_fields(self, keyword):
         if self.keyword_dict:
-            res =self.keyword_dict.get(keyword)
+            res = self.keyword_dict.get(keyword)
             return res if res else [str(keyword)]
         return [str(keyword)]
 
@@ -77,17 +77,15 @@ class ASTtoDSLConverter(object):
 
     @visitor(ast.DoubleQuotedValue)
     def visit(self, node):
-        return lambda x: {
-                    "bool": {
-                        "should": [{"term": {str(k): str(node.value)}}
-                                   for k in x]
-                        }
-                    } if x[0] != "_all" else {
-                    "bool": {
-                        "should": [{"term": {str(k): str(node.value)}}
-                                   for k in self.map_keyword_to_fields("raw_fields")]
-                        }
+        return lambda x: {"bool": {
+            "should": [{"term": {str(k): str(node.value)}} for k in x]
+            }
+            } if x[0] != "_all" else {
+                "bool": {
+                    "should": [{"term": {str(k): str(node.value)}} for k in
+                               self.map_keyword_to_fields("raw_fields")]
                     }
+                }
 
     @visitor(ast.RangeOp)
     def visit(self, node, left, right):

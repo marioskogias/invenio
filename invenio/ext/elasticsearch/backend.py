@@ -105,18 +105,18 @@ class ElasticSearchWrapper(object):
         if self.index_exists(index=index):
             return True
         try:
-            #create index
+            # create index
             index_settings = {
-                #should be set to 1 for exact facet count
+                # should be set to 1 for exact facet count
                 "number_of_shards":
                 self.app.config['ELASTICSEARCH_NUMBER_OF_SHARDS'],
 
-                #in case of primary shard failed
+                # in case of primary shard failed
                 "number_of_replicas":
                 self.app.config['ELASTICSEARCH_NUMBER_OF_REPLICAS'],
 
-                #disable automatic type detection
-                #that can cause errors depending of the indexing order
+                # disable automatic type detection
+                # that can cause errors depending of the indexing order
                 "date_detection":
                 self.app.config['ELASTICSEARCH_DATE_DETECTION'],
                 "numeric_detection":
@@ -128,12 +128,12 @@ class ElasticSearchWrapper(object):
 
             self.connection.create_index(index=index, settings=index_settings)
 
-            #create mappings for each type
+            # create mappings for each type
 
-            #mapping for records
+            # mapping for records
             self.create_mapping(index, self.records_doc_type)
 
-            #mapping for documents
+            # mapping for documents
             self.create_mapping(index, self.documents_doc_type)
             return True
         except:
@@ -166,7 +166,7 @@ class ElasticSearchWrapper(object):
                                              id_field='_id',
                                              refresh=refresh_flag)
         errors = []
-        #for it in results.get("items"):
+        # for it in results.get("items"):
         #    if it.get("index").get("error"):
         #        errors.append((it.get("index").get("_id"),
         #                       it.get("index").get("error")))
@@ -175,13 +175,12 @@ class ElasticSearchWrapper(object):
     def enhance_rec_content(self, record):
         """Add remove fields from the record to be stored in elasticsearch"""
         del record["__meta_metadata__"]
-        #del record_as_dict["_id"]
-        #FIXME handle mutliple collection types
+        # del record_as_dict["_id"]
+        # FIXME handle mutliple collection types
         collections = [val.values()[0]
                        for val in record["collections"]]
         record['collections'] = collections
         record['title'] = record['title']['title']
-        #record['abstract'] = record['abstract']['summary']
         # get full text if any
         record['documents'] = self._get_text(record["_id"])
         return record
@@ -197,11 +196,11 @@ class ElasticSearchWrapper(object):
         from invenio.legacy.bibdocfile.api import BibRecDocs
         bibrecdocs = BibRecDocs(recid)
 
-        bibrecdocs.get_text() # this creates the content for each text file
+        bibrecdocs.get_text()  # this creates the content for each text file
         documents = bibrecdocs.list_bibdocs_by_names()
 
         document_list = []
-        for k,v in documents.iteritems():
+        for k, v in documents.iteritems():
             doc = {
                 "fulltext": v.get_text(),
                 "filename": k
@@ -246,8 +245,8 @@ class ElasticSearchWrapper(object):
         recids_to_index = recids
         if recids_to_index:
             self.app.logger.debug("Indexing document for %s" % recids)
-        return self._index_docs(recids_to_index, self.documents_doc_type, index,
-                bulk_size, self._get_text)
+        return self._index_docs(recids_to_index, self.documents_doc_type,
+                                index, bulk_size, self._get_text)
 
     def _index_docs(self, recids, doc_type, index, bulk_size, get_docs):
         docs = []
@@ -261,7 +260,7 @@ class ElasticSearchWrapper(object):
                     docs.append(doc)
             if len(docs) >= bulk_size:
                 errors += self._bulk_index_docs(docs, doc_type=doc_type,
-                        index=index)
+                                                index=index)
                 docs = []
         errors += self._bulk_index_docs(docs, doc_type=doc_type, index=index)
         return errors
