@@ -13,6 +13,8 @@ class QueryHandler(object):
         self.dslCreator = ASTtoDSLConverter(query_mapping.fields)
 
     def get_dsl_query(self, query):
+        if query == "*":  # this is what the UI returns FIXME
+            return { "match_all": { }   }
         peg = parse(query, parser.Main, whitespace="")
         ast = peg.accept(self.astCreator)
         dsl_query = ast.accept(self.dslCreator)
@@ -49,9 +51,6 @@ class QueryHandler(object):
         dsl_query["aggs"] = es_config.aggs
         dsl_query["highlight"] = es_config.highlight
         dsl_query["_source"] = es_config.should_return_source
-        print "\n\n\n\n"
-        print dsl_query
-        print "\n\n\n\n"
         return dsl_query
 
     def process_query(self, query, filters):
