@@ -23,7 +23,7 @@ from sqlalchemy.orm.collections import attribute_mapped_collection
 
 from invenio.ext.sqlalchemy import db
 from invenio.ext.sqlalchemy.utils import session_manager
-from invenio.modules.search.models import Collection
+from invenio.modules.collections.models import Collection
 
 
 class KnwKB(db.Model):

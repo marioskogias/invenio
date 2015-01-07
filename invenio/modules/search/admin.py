@@ -28,7 +28,7 @@ except ImportError:
 
 from invenio.ext.admin.views import ModelView
 from invenio.ext.sqlalchemy import db
-from invenio.modules.search.models import FacetCollection, Collection
+from invenio.modules.collections.models import FacetCollection, Collection
 from invenio.modules.search.registry import facets
 
 
