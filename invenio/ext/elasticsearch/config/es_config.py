@@ -63,6 +63,10 @@ mappings = {
                                 "index": "not_analyzed"
                             }
                         }
+                    },
+                    "name_variations": {
+                        "type": "string",
+                        "index": "not_analyzed"
                     }
                 }
             },
@@ -107,6 +111,10 @@ mappings = {
                                 "index": "not_analyzed"
                             }
                         }
+                    },
+                    "name_variations": {
+                        "type": "string",
+                        "index": "not_analyzed"
                     }
                 }
             },
@@ -125,19 +133,6 @@ mappings = {
                 }
             }
 
-        }
-    },
-    "documents": {
-        "_parent": {"type": "records"},
-        "properties": {
-            "fulltext": {
-                "type": "string",
-                "index": "analyzed"
-                },
-            "recid": {
-                "type": "integer",
-                "index": "not_analyzed"
-                }
         }
     }
 }

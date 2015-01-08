@@ -1,5 +1,8 @@
 from werkzeug.utils import cached_property
 from pyelasticsearch import ElasticSearch as PyElasticSearch
+#from invenio.modules.indexer.tokenizers.BibIndexAuthorTokenizer import BibIndexAuthorTokenizer
+from invenio.base.wrappers import lazy_import
+load_tokenizers = lazy_import('invenio.legacy.bibindex.engine_utils:load_tokenizers')
 import json
 
 
@@ -12,6 +15,13 @@ class ElasticSearchWrapper(object):
         # TODO: to put in config?
         self.records_doc_type = "records"
         self.documents_doc_type = "documents"
+
+        self.author_tokenizer = None
+        # create the tokenizer object
+        #tokenizers = load_tokenizers()
+        #self.author_tokenizer = tokenizers['BibIndexAuthorTokenizer']()
+        #self.author_tokenizer = None
+        #self.author_tokenizer = BibIndexAuthorTokenizer()
 
         if app is not None:
             self.init_app(app)
@@ -173,7 +183,9 @@ class ElasticSearchWrapper(object):
         return errors
 
     def enhance_rec_content(self, record):
-        """Add remove fields from the record to be stored in elasticsearch"""
+        """Add remove fields from the record to be stored in elasticsearch
+           Here we will add all the calculated fields
+        """
         del record["__meta_metadata__"]
         # del record_as_dict["_id"]
         # FIXME handle mutliple collection types
@@ -181,8 +193,20 @@ class ElasticSearchWrapper(object):
                        for val in record["collections"]]
         record['collections'] = collections
         record['title'] = record['title']['title']
+        record['abstract'] = record['abstract']['summary']
         # get full text if any
         record['documents'] = self._get_text(record["_id"])
+        # Create name iterations
+        if not self.author_tokenizer:
+            tokenizers = load_tokenizers()
+            self.author_tokenizer = tokenizers['BibIndexAuthorTokenizer']()
+
+        def _add_variations(x):
+            x['name_variations'] = self.author_tokenizer.tokenize_for_fuzzy_authors(x['full_name'])
+            return x
+        record['authors'] = map(_add_variations, record['authors'])
+        _add_variations(record["_first_author"])
+
         return record
 
     def _get_record(self, recid):
