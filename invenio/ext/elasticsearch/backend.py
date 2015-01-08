@@ -1,8 +1,9 @@
 from werkzeug.utils import cached_property
 from pyelasticsearch import ElasticSearch as PyElasticSearch
 #from invenio.modules.indexer.tokenizers.BibIndexAuthorTokenizer import BibIndexAuthorTokenizer
-from invenio.base.wrappers import lazy_import
-load_tokenizers = lazy_import('invenio.legacy.bibindex.engine_utils:load_tokenizers')
+#from invenio.base.wrappers import lazy_import
+#load_tokenizers = lazy_import('invenio.legacy.bibindex.engine_utils:load_tokenizers')
+from record_enhancer import Enhancer
 import json
 
 
@@ -187,13 +188,15 @@ class ElasticSearchWrapper(object):
            Here we will add all the calculated fields
         """
         del record["__meta_metadata__"]
-        # del record_as_dict["_id"]
         # FIXME handle mutliple collection types
         collections = [val.values()[0]
                        for val in record["collections"]]
         record['collections'] = collections
         record['title'] = record['title']['title']
-        record['abstract'] = record['abstract']['summary']
+        try:
+            record['abstract'] = record['abstract']['summary']
+        except KeyError:
+            print "Record %s doesn't have abstract" % record["_id"]
         # get full text if any
         record['documents'] = self._get_text(record["_id"])
         # Create name iterations
@@ -212,27 +215,10 @@ class ElasticSearchWrapper(object):
     def _get_record(self, recid):
         from invenio.modules.records.api import get_record
         record_as_dict = get_record(recid, reset_cache=True).dumps()
-        enhanced_record = self.enhance_rec_content(record_as_dict)
+        if not self.enhancer:
+            self.enhancer = Enhancer()
+        enhanced_record = self.enhancer.enhance_rec_content(record_as_dict)
         return enhanced_record
-
-    def _get_text(self, recid):
-        """Return a list of dictionaries with filename and fulltext"""
-        from invenio.legacy.bibdocfile.api import BibRecDocs
-        bibrecdocs = BibRecDocs(recid)
-
-        bibrecdocs.get_text()  # this creates the content for each text file
-        documents = bibrecdocs.list_bibdocs_by_names()
-
-        document_list = []
-        for k, v in documents.iteritems():
-            doc = {
-                "fulltext": v.get_text(),
-                "filename": k
-            }
-            document_list.append(doc)
-        if not document_list:
-            self.app.logger.debug("No text for:%s" % recid)
-        return document_list
 
     def index_records(self, recids, index=None, bulk_size=100000, **kwargs):
         """Index bibliographic records.

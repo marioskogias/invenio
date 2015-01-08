@@ -2,7 +2,6 @@ from backend import ElasticSearchWrapper
 from query_handler import QueryHandler
 from results_handler import ResultsHandler
 
-
 def index_record(sender, recid):
     """
     Index a given record.
@@ -46,6 +45,10 @@ def setup_app(app):
 
     # initiate the results handler
     es.results_handler = ResultsHandler()
+
+    # initiate the enhancer FIXME initiate it here
+    # es.enhancer = Enhancer()
+    es.enhancer = None
 
     packages = app.extensions["registry"]["packages"]
     packages.register("invenio.ext.elasticsearch")
