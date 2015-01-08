@@ -15,21 +15,23 @@ def index_record(sender, recid):
     return index_records.delay(sender, recid)
 
 
-def create_index(sender):
+def create_index(sender, *args, **kwargs):
     """
     Create elasticsearch index
     Configure mappings as found in mapping.cfg
     """
+    print "Create index called"
     from flask import current_app
     es = current_app.extensions.get("elasticsearch")
     es.create_index()
 
 
-def drop_index(sender):
+def drop_index(sender, *args, **kwargs):
     """
     Create elasticsearch index
     Configure mappings as found in mapping.cfg
     """
+    print "Delete index called"
     from flask import current_app
     es = current_app.extensions.get("elasticsearch")
     es.delete_index()
@@ -52,5 +54,5 @@ def setup_app(app):
     from invenio.base.scripts.database import recreate, drop, create
     signals.pre_command.connect(drop_index, sender=drop)
     signals.post_command.connect(create_index, sender=create)
-    signals.pre_command.connect(drop_index, sender=recreate)
+    signals.pre_command.connect(drop_index, sender=drop)
     signals.post_command.connect(create_index, sender=recreate)
