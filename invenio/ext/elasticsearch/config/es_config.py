@@ -154,7 +154,7 @@ aggs = {
 # Configure fields for highlighting
 highlight = {
     "fields": {
-        "abstract.summary": {}
+        "abstract": {}
     }
 }
 
