@@ -1,9 +1,15 @@
+"""This file is responsible for the enhancing the json records before storing
+   them in Elasticsearch. Normally here all the calculated fields will be
+   calculated.
+"""
+
 from invenio.base.wrappers import lazy_import
-load_tokenizers = lazy_import('invenio.legacy.bibindex.engine_utils:load_tokenizers')
+get_toks = lazy_import('invenio.legacy.bibindex.engine_utils:load_tokenizers')
+
 
 class Enhancer(object):
     def __init__(self):
-        tokenizers = load_tokenizers()
+        tokenizers = get_toks()
         self.author_tokenizer = tokenizers['BibIndexAuthorTokenizer']()
 
     def _get_text(self, recid):
@@ -59,7 +65,9 @@ class Enhancer(object):
 
             # Create name iterations
             def _add_variations(x):
-                x['name_variations'] = self.author_tokenizer.tokenize_for_fuzzy_authors(x['full_name'])
+                name = x['full_name']
+                value = self.author_tokenizer.tokenize_for_fuzzy_authors(name)
+                x['name_variations'] = value
                 return x
             record['authors'] = map(_add_variations, record['authors'])
             _add_variations(record["_first_author"])

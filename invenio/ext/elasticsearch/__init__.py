@@ -2,6 +2,7 @@ from backend import ElasticSearchWrapper
 from query_handler import QueryHandler
 from results_handler import ResultsHandler
 
+
 def index_record(sender, recid):
     """
     Index a given record.

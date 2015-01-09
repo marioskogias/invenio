@@ -1,8 +1,13 @@
+"""This file is responsible for the elasticsearch communication.
+   It defines the necessary functions for search and index.
+   It makes calls to the query_handler so as to form the elasticsearch query.
+   It makes calls to the results_handler so as to form the elasticsearch
+   results to be presented in the UI.
+   It makes calls to the enhancer so as to form the json record.
+"""
+
 from werkzeug.utils import cached_property
 from pyelasticsearch import ElasticSearch as PyElasticSearch
-#from invenio.modules.indexer.tokenizers.BibIndexAuthorTokenizer import BibIndexAuthorTokenizer
-#from invenio.base.wrappers import lazy_import
-#load_tokenizers = lazy_import('invenio.legacy.bibindex.engine_utils:load_tokenizers')
 from record_enhancer import Enhancer
 import json
 
@@ -16,13 +21,6 @@ class ElasticSearchWrapper(object):
         # TODO: to put in config?
         self.records_doc_type = "records"
         self.documents_doc_type = "documents"
-
-        self.author_tokenizer = None
-        # create the tokenizer object
-        #tokenizers = load_tokenizers()
-        #self.author_tokenizer = tokenizers['BibIndexAuthorTokenizer']()
-        #self.author_tokenizer = None
-        #self.author_tokenizer = BibIndexAuthorTokenizer()
 
         if app is not None:
             self.init_app(app)
@@ -182,35 +180,6 @@ class ElasticSearchWrapper(object):
         #        errors.append((it.get("index").get("_id"),
         #                       it.get("index").get("error")))
         return errors
-
-    def enhance_rec_content(self, record):
-        """Add remove fields from the record to be stored in elasticsearch
-           Here we will add all the calculated fields
-        """
-        del record["__meta_metadata__"]
-        # FIXME handle mutliple collection types
-        collections = [val.values()[0]
-                       for val in record["collections"]]
-        record['collections'] = collections
-        record['title'] = record['title']['title']
-        try:
-            record['abstract'] = record['abstract']['summary']
-        except KeyError:
-            print "Record %s doesn't have abstract" % record["_id"]
-        # get full text if any
-        record['documents'] = self._get_text(record["_id"])
-        # Create name iterations
-        if not self.author_tokenizer:
-            tokenizers = load_tokenizers()
-            self.author_tokenizer = tokenizers['BibIndexAuthorTokenizer']()
-
-        def _add_variations(x):
-            x['name_variations'] = self.author_tokenizer.tokenize_for_fuzzy_authors(x['full_name'])
-            return x
-        record['authors'] = map(_add_variations, record['authors'])
-        _add_variations(record["_first_author"])
-
-        return record
 
     def _get_record(self, recid):
         from invenio.modules.records.api import get_record

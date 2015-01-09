@@ -1,3 +1,6 @@
+"""This file is responsible for treating the elasticsearch results before they
+   can be presented by the UI, namely the elasticsearch_view
+"""
 from UserDict import UserDict
 
 

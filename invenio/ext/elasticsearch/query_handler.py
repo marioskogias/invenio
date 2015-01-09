@@ -1,3 +1,6 @@
+"""This file is responsible for formating the elasticsearch query using the
+   invenio_query_parser
+"""
 from invenio_query_parser.walkers.pypeg_to_ast import PypegConverter
 from invenio_query_parser import parser
 from ast_to_dsl import ASTtoDSLConverter
