@@ -53,7 +53,6 @@ from invenio.config import \
     CFG_WEBDIR, \
     CFG_WEBSEARCH_USE_MATHJAX_FOR_FORMATS, \
     CFG_WEBSEARCH_MAX_RECORDS_IN_GROUPS, \
-    CFG_WEBSEARCH_USE_ALEPH_SYSNOS, \
     CFG_WEBSEARCH_RSS_I18N_COLLECTIONS, \
     CFG_INSPIRE_SITE, \
     CFG_WEBSEARCH_WILDCARD_LIMIT, \
@@ -73,29 +72,21 @@ from invenio.base.i18n import gettext_set_language
 from invenio.legacy.search_engine import check_user_can_view_record, \
     collection_reclist_cache, \
     collection_restricted_p, \
-    create_similarly_named_authors_link_box, \
-    get_colID, \
     get_coll_i18nname, \
     get_most_popular_field_values, \
-    get_mysql_recid_from_aleph_sysno, \
     guess_primary_collection_of_a_record, \
-    page_end, \
-    page_start, \
-    perform_request_cache, \
-    perform_request_log, \
     perform_request_search, \
     restricted_collection_cache, \
-    get_coll_normalised_name, \
     EM_REPOSITORY
-from invenio.legacy.websearch.webcoll import perform_display_collection
+from invenio.modules.collections.models import Collection
 from invenio.legacy.bibrecord import get_fieldvalues, \
      get_fieldvalues_alephseq_like
 from invenio.modules.access.engine import acc_authorize_action
 from invenio.modules.access.local_config import VIEWRESTRCOLL
 from invenio.modules.access.mailcookie import mail_cookie_create_authorize_action
+from invenio.modules.collections.cache import get_collection_reclist
 from invenio.modules.formatter import format_records
 from invenio.modules.formatter.engine import get_output_formats
-from invenio.legacy.websearch.webcoll import get_collection
 from intbitset import intbitset
 from invenio.legacy.bibupload.engine import find_record_from_sysno
 from invenio.legacy.bibrank.citation_searcher import get_cited_by_list
@@ -401,7 +392,7 @@ class WebInterfaceRecordRestrictedPages(WebInterfaceDirectory):
 class WebInterfaceSearchResultsPages(WebInterfaceDirectory):
     """ Handling of the /search URL and its sub-pages. """
 
-    _exports = ['', 'authenticate', 'cache', 'log']
+    _exports = ['', 'authenticate', 'cache']
 
     def __call__(self, req, form):
         """ Perform a search. """
@@ -458,7 +449,7 @@ class WebInterfaceSearchResultsPages(WebInterfaceDirectory):
                 for collname in restricted_collection_cache.cache:
                     (auth_code, auth_msg) = acc_authorize_action(user_info, VIEWRESTRCOLL, collection=collname)
                     if auth_code and user_info['email'] == 'guest':
-                        coll_recids = get_collection(collname).reclist
+                        coll_recids = get_collection_reclist(collname)
                         if coll_recids & recids:
                             cookie = mail_cookie_create_authorize_action(VIEWRESTRCOLL, {'collection' : collname})
                             target = CFG_SITE_SECURE_URL + '/youraccount/login' + \
@@ -509,16 +500,6 @@ class WebInterfaceSearchResultsPages(WebInterfaceDirectory):
             return str(out)
         else:
             return out
-
-    def cache(self, req, form):
-        """Search cache page."""
-        argd = wash_urlargd(form, {'action': (str, 'show')})
-        return perform_request_cache(req, action=argd['action'])
-
-    def log(self, req, form):
-        """Search log page."""
-        argd = wash_urlargd(form, {'date': (str, '')})
-        return perform_request_log(req, date=argd['date'])
 
     def authenticate(self, req, form):
         """Restricted search results pages."""
@@ -682,19 +663,7 @@ class WebInterfaceSearchInterfacePages(WebInterfaceDirectory):
 
         elif component == CFG_SITE_RECORD or component == 'record-restricted':
             try:
-                if CFG_WEBSEARCH_USE_ALEPH_SYSNOS:
-                    # let us try to recognize /<CFG_SITE_RECORD>/<SYSNO> style of URLs:
-                    # check for SYSNOs with an embedded slash; needed for [ARXIVINV-15]
-                    if len(path) > 1 and get_mysql_recid_from_aleph_sysno(path[0] + "/" + path[1]):
-                        path[0] = path[0] + "/" + path[1]
-                        del path[1]
-                    x = get_mysql_recid_from_aleph_sysno(path[0])
-                    if x:
-                        recid = x
-                    else:
-                        recid = int(path[0])
-                else:
-                    recid = int(path[0])
+                recid = int(path[0])
             except IndexError:
                 # display record #1 for URL /CFG_SITE_RECORD without a number
                 recid = 1
@@ -846,8 +815,9 @@ def display_collection(req, c, aas, verbose, ln, em=""):
                     navmenuid='search')
 
     # deduce collection id:
-    normalised_name = get_coll_normalised_name(c)
-    colID = get_colID(normalised_name)
+    collection = Collection.query.filter_by(name=c).first()
+    colID = collection.id if collection else None
+    normalised_name = collection.name if collection else c
     if type(colID) is not int:
         page_body = '<p>' + (_("Sorry, collection %(x_colname)s does not seem to exist.", x_colname='<strong>' + str(c) + '</strong>',)) + '</p>'
         page_body = '<p>' + (_("You may want to start browsing from %(x_sitehref)s.", x_sitehref='<a href="' + CFG_SITE_URL + '?ln=' + ln + '">' + get_coll_i18nname(CFG_SITE_NAME, ln) + '</a>')) + '</p>'
@@ -862,82 +832,8 @@ def display_collection(req, c, aas, verbose, ln, em=""):
                     req=req,
                     navmenuid='search')
 
-    if normalised_name != c:
-        redirect_to_url(req, normalised_name, apache.HTTP_MOVED_PERMANENTLY)
-
-    # start display:
-    req.content_type = "text/html"
-    req.send_http_header()
-
-    c_body, c_navtrail, c_portalbox_lt, c_portalbox_rt, c_portalbox_tp, c_portalbox_te, \
-        c_last_updated = perform_display_collection(colID, c, aas, ln, em,
-                                            user_preferences.get('websearch_helpbox', 1))
-
-    if em == "" or EM_REPOSITORY["body"] in em:
-        try:
-            title = get_coll_i18nname(c, ln)
-        except:
-            title = ""
-    else:
-        title = ""
-    show_title_p = True
-    body_css_classes = []
-    if c == CFG_SITE_NAME:
-        # Do not display title on home collection
-        show_title_p = False
-        body_css_classes.append('home')
-
-    if len(collection_reclist_cache.cache.keys()) == 1:
-        # if there is only one collection defined, do not print its
-        # title on the page as it would be displayed repetitively.
-        show_title_p = False
-
-    if aas == -1:
-        show_title_p = False
-
-    if CFG_INSPIRE_SITE == 1:
-        # INSPIRE should never show title, but instead use css to
-        # style collections
-        show_title_p = False
-        body_css_classes.append(nmtoken_from_string(c))
-
-    # RSS:
-    rssurl = CFG_SITE_URL + '/rss'
-    rssurl_params = []
-    if c != CFG_SITE_NAME:
-        rssurl_params.append('cc=' + quote(c))
-    if ln != CFG_SITE_LANG and \
-           c in CFG_WEBSEARCH_RSS_I18N_COLLECTIONS:
-        rssurl_params.append('ln=' + ln)
-
-    if rssurl_params:
-        rssurl += '?' + '&amp;'.join(rssurl_params)
-
-    if 'hb' in CFG_WEBSEARCH_USE_MATHJAX_FOR_FORMATS:
-        metaheaderadd = get_mathjax_header(req.is_https())
-    else:
-        metaheaderadd = ''
-
-    return page(title=title,
-                body=c_body,
-                navtrail=c_navtrail,
-                description="%s - %s" % (CFG_SITE_NAME, c),
-                keywords="%s, %s" % (CFG_SITE_NAME, c),
-                metaheaderadd=metaheaderadd,
-                uid=uid,
-                language=ln,
-                req=req,
-                cdspageboxlefttopadd=c_portalbox_lt,
-                cdspageboxrighttopadd=c_portalbox_rt,
-                titleprologue=c_portalbox_tp,
-                titleepilogue=c_portalbox_te,
-                lastupdated=c_last_updated,
-                navmenuid='search',
-                rssurl=rssurl,
-                body_css_classes=body_css_classes,
-                show_title_p=show_title_p,
-                show_header=em == "" or EM_REPOSITORY["header"] in em,
-                show_footer=em == "" or EM_REPOSITORY["footer"] in em)
+    from flask import redirect, url_for
+    return redirect(url_for('collections.collection', name=collection.name))
 
 
 def resolve_doi(req, doi, ln=CFG_SITE_LANG, verbose=0):
@@ -1117,16 +1013,15 @@ class WebInterfaceRSSFeedServicePages(WebInterfaceDirectory):
             # Check if there's enough space to cache the request.
             if len(os.listdir(dirname)) < CFG_WEBSEARCH_RSS_MAX_CACHED_REQUESTS:
                 try:
-                    os.umask(0o022)
-                    f = open(fullfilename, "w")
-                    f.write(rss_prologue + rss_body + rss_epilogue)
-                    f.close()
+                    os.umask(022)
+                    with open(fullfilename, "w") as fd:
+                        fd.write(rss_prologue + rss_body + rss_epilogue)
                 except IOError as v:
                     if v[0] == 36:
                         # URL was too long. Never mind, don't cache
                         pass
                     else:
-                        raise repr(v)
+                        raise
 
     index = __call__
 

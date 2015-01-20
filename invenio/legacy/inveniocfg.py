@@ -198,7 +198,8 @@ Please, update your invenio-local.conf file accordingly.""" % (option_name, new_
                        'CFG_BIBSCHED_NON_CONCURRENT_TASKS',
                        'CFG_REDIS_HOSTS',
                        'CFG_BIBSCHED_INCOMPATIBLE_TASKS',
-                       'CFG_ICON_CREATION_FORMAT_MAPPINGS']:
+                       'CFG_ICON_CREATION_FORMAT_MAPPINGS',
+                       'CFG_BIBEDIT_AUTOCOMPLETE']:
         try:
             option_value = option_value[1:-1]
             if option_name == "CFG_BIBEDIT_EXTEND_RECORD_WITH_COLLECTION_TEMPLATE" and option_value.strip().startswith("{"):
@@ -231,6 +232,7 @@ You may want to customise your invenio-local.conf configuration accordingly.""",
                        'CFG_WEBSEARCH_USE_MATHJAX_FOR_FORMATS',
                        'CFG_BIBUPLOAD_STRONG_TAGS',
                        'CFG_BIBFORMAT_HIDDEN_TAGS',
+                       'CFG_BIBFORMAT_HIDDEN_RECJSON_FIELDS',
                        'CFG_BIBSCHED_GC_TASKS_TO_REMOVE',
                        'CFG_BIBSCHED_GC_TASKS_TO_ARCHIVE',
                        'CFG_BIBUPLOAD_FFT_ALLOWED_LOCAL_PATHS',

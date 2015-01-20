@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ##
 ## This file is part of Invenio.
-## Copyright (C) 2009, 2010, 2011, 2012, 2014 CERN.
+## Copyright (C) 2009, 2010, 2011, 2012, 2013, 2014, 2015 CERN.
 ##
 ## Invenio is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as
@@ -24,9 +24,11 @@ This is a subclass of BibCatalogSystem
 
 import os
 import re
-import invenio.legacy.webuser
+
+from invenio.utils.serializers import deserialize_via_marshal
 from invenio.utils.shell import run_shell_command, escape_shell_arg
 from invenio.legacy.bibcatalog.system import BibCatalogSystem, get_bibcat_from_prefs
+from invenio.legacy.dbquery import run_sql
 
 from invenio.config import CFG_BIBCATALOG_SYSTEM, \
                            CFG_BIBCATALOG_SYSTEM_RT_CLI, \
@@ -34,6 +36,20 @@ from invenio.config import CFG_BIBCATALOG_SYSTEM, \
                            CFG_BIBCATALOG_SYSTEM_RT_DEFAULT_USER, \
                            CFG_BIBCATALOG_SYSTEM_RT_DEFAULT_PWD, \
                            CFG_BIBEDIT_ADD_TICKET_RT_QUEUES
+
+
+def get_uid_based_on_pref(prefname, prefvalue):
+    """get the user's UID based where his/her preference prefname has value prefvalue in preferences"""
+    prefs = run_sql("SELECT id, settings FROM user WHERE settings is not NULL")
+    the_uid = None
+    for pref in prefs:
+        try:
+            settings = deserialize_via_marshal(pref[1])
+            if (prefname in settings) and (settings[prefname] == prefvalue):
+                the_uid = pref[0]
+        except:
+            pass
+    return the_uid
 
 
 class BibCatalogSystemRT(BibCatalogSystem):
@@ -184,20 +200,24 @@ class BibCatalogSystemRT(BibCatalogSystem):
             comment = True
             res = self._ticket_submit(uid=uid, subject=subject,
                                       queue=queue,
-                                      recordid=recordid)
+                                      recordid=recordid,
+                                      owner=owner,
+                                      requestor=requestor)
         else:
             res = self._ticket_submit(uid=uid, subject=subject,
                                       queue=queue,
                                       text=text,
-                                      recordid=recordid)
-
+                                      recordid=recordid,
+                                      owner=owner,
+                                      requestor=requestor)
         try:
             # The BibCatalog API returns int if successful or
             # a string explaining the error if unsuccessful.
-            ticketid = int(res)
+            int(res)
         except (ValueError, TypeError), e:
             # Not a number. Must be an error string
             raise Exception("%s\n%s" % (res, str(e)))
+        ticketid = res
 
         if comment:
             self.ticket_comment(uid=uid,
@@ -209,7 +229,7 @@ class BibCatalogSystemRT(BibCatalogSystem):
 
     def _ticket_submit(self, uid=None, subject="", recordid=-1, text="",
                        queue="", priority="", owner="", requestor=""):
-        """creates a ticket. return ticket num on success, otherwise None"""
+        """creates a ticket. return ticket_id string on success, otherwise None"""
         queueset = ""
         textset = ""
         priorityset = ""
@@ -250,7 +270,7 @@ class BibCatalogSystemRT(BibCatalogSystem):
         for line in command_out.split("\n"):
             matches = ticket_created_re.search(line)
             if matches:
-                ticket_id = int(matches.groups()[0])
+                ticket_id = matches.groups()[0]
 
         return ticket_id
 
@@ -258,7 +278,7 @@ class BibCatalogSystemRT(BibCatalogSystem):
         """comment on a given ticket. Returns 1 on success, 0 on failure"""
         command = '%s comment -m %s %s' % (CFG_BIBCATALOG_SYSTEM_RT_CLI,
                                            escape_shell_arg(comment),
-                                           str(ticketid))
+                                           ticketid)
         command_out = self._run_rt_command(command, uid)
         if command_out is None:
             return None
@@ -270,7 +290,7 @@ class BibCatalogSystemRT(BibCatalogSystem):
 
     def ticket_steal(self, uid, ticketid):
         """steal a ticket from an RT user. Returns 1 on success, 0 on failure"""
-        command = CFG_BIBCATALOG_SYSTEM_RT_CLI + " steal " + str(ticketid)
+        command = CFG_BIBCATALOG_SYSTEM_RT_CLI + " steal " + ticketid
         command_out = self._run_rt_command(command, uid)
         if command_out is None:
             return 0
@@ -317,7 +337,7 @@ class BibCatalogSystemRT(BibCatalogSystem):
         except ValueError:
             return 0
 
-        command = CFG_BIBCATALOG_SYSTEM_RT_CLI + " edit ticket/" + str(ticketid) + setme
+        command = CFG_BIBCATALOG_SYSTEM_RT_CLI + " edit ticket/" + ticketid + setme
         command_out = self._run_rt_command(command, uid)
         if command_out is None:
             return 0
@@ -338,15 +358,13 @@ class BibCatalogSystemRT(BibCatalogSystem):
         """return ticket info as a dictionary of pre-defined attribute names.
            Or just those listed in attrlist.
            Returns None on failure"""
-        # Make sure ticketid is numeric
-        try:
-            dummy = int(ticketid)
-        except ValueError:
+        # Make sure ticketid is not None
+        if not ticketid:
             return 0
         if attributes is None:
             attributes = []
 
-        command = CFG_BIBCATALOG_SYSTEM_RT_CLI + " show ticket/" + str(ticketid)
+        command = CFG_BIBCATALOG_SYSTEM_RT_CLI + " show ticket/" + ticketid
         command_out = self._run_rt_command(command, uid)
         if command_out is None:
             return 0
@@ -359,7 +377,7 @@ class BibCatalogSystemRT(BibCatalogSystem):
                 tdict[tattr] = tvalue
 
         # Query again to get attachments -> Contents
-        command = CFG_BIBCATALOG_SYSTEM_RT_CLI + " show ticket/" + str(ticketid) + "/attachments/"
+        command = CFG_BIBCATALOG_SYSTEM_RT_CLI + " show ticket/" + ticketid + "/attachments/"
         command_out = self._run_rt_command(command, uid)
         if command_out is None:
             return 0
@@ -372,7 +390,7 @@ class BibCatalogSystemRT(BibCatalogSystem):
 
         # Query again for each attachment
         for att in attachments:
-            command = CFG_BIBCATALOG_SYSTEM_RT_CLI + " show ticket/" + str(ticketid) + "/attachments/" + att
+            command = CFG_BIBCATALOG_SYSTEM_RT_CLI + " show ticket/" + ticketid + "/attachments/" + att
             command_out = self._run_rt_command(command, uid)
             if command_out is None:
                 return 0
@@ -394,16 +412,16 @@ class BibCatalogSystemRT(BibCatalogSystem):
             if 'id' in tdict:
                 candict['ticketid'] = tdict['id']
             # Make specific URL attributes:
-            url_display = CFG_BIBCATALOG_SYSTEM_RT_URL + "/Ticket/Display.html?id=" + str(ticketid)
+            url_display = CFG_BIBCATALOG_SYSTEM_RT_URL + "/Ticket/Display.html?id=" + ticketid
             candict['url_display'] = url_display
-            url_close = CFG_BIBCATALOG_SYSTEM_RT_URL + "/Ticket/Update.html?Action=Comment&DefaultStatus=resolved&id=" + str(ticketid)
+            url_close = CFG_BIBCATALOG_SYSTEM_RT_URL + "/Ticket/Update.html?Action=Comment&DefaultStatus=resolved&id=" + ticketid
             candict['url_close'] = url_close
-            url_modify = CFG_BIBCATALOG_SYSTEM_RT_URL + "/Ticket/ModifyAll.html?id=" + str(ticketid)
+            url_modify = CFG_BIBCATALOG_SYSTEM_RT_URL + "/Ticket/ModifyAll.html?id=" + ticketid
             candict['url_modify'] = url_modify
             # Change the ticket owner into invenio UID
             if 'owner' in tdict:
                 rt_owner = tdict["owner"]
-                uid = invenio.legacy.webuser.get_uid_based_on_pref("bibcatalog_username", rt_owner)
+                uid = get_uid_based_on_pref("bibcatalog_username", rt_owner)
                 candict['owner'] = uid
             if len(attributes) == 0: # return all fields
                 return candict
@@ -464,7 +482,8 @@ class BibCatalogSystemRT(BibCatalogSystem):
         os.environ["RTUSER"] = username
         os.environ["RTSERVER"] = bibcatalog_rt_server
         passwd = escape_shell_arg(passwd)
-        error_code, myout, dummyerr = run_shell_command("echo " + passwd + " | " + command)
+        error_code, myout, error_output = run_shell_command("echo " + passwd + " | " + command)
         if error_code > 0:
-            raise ValueError('Problem running "%s": %d' % (command, error_code))
+            raise ValueError('Problem running "%s": %d - %s' %
+                             (command, error_code, error_output))
         return myout

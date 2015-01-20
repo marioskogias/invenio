@@ -49,7 +49,6 @@ from ..utils import (sort_bwolist, extract_data, get_action_list,
                      get_holdingpen_objects,
                      get_rendered_task_results,
                      get_previous_next_objects)
-from ..engine import WorkflowStatus
 from ..api import continue_oid_delayed, start_delayed
 from ..acl import viewholdingpen
 
@@ -62,7 +61,7 @@ HOLDINGPEN_WORKFLOW_STATES = {
     ObjectVersion.HALTED: {'message': _('Need Action'), 'class': 'danger'},
     ObjectVersion.WAITING: {'message': _('Waiting'), 'class': 'warning'},
     ObjectVersion.ERROR: {'message': _('Error'), 'class': 'danger'},
-    ObjectVersion.FINAL: {'message': _('Done'), 'class': 'success'},
+    ObjectVersion.COMPLETED: {'message': _('Done'), 'class': 'success'},
     ObjectVersion.INITIAL: {'message': _('New'), 'class': 'info'},
     ObjectVersion.RUNNING: {'message': _('In process'), 'class': 'warning'}
 }
@@ -128,17 +127,11 @@ def details(objectid):
 
     of = "hd"
     bwobject = BibWorkflowObject.query.get(objectid)
-    if 'holdingpen_current_ids' in session:
-        objects = session['holdingpen_current_ids']
-    else:
-        bwobject_list = get_holdingpen_objects([str(ObjectVersion.HALTED)])
-        objects = []
-        for obj in bwobject_list:
-            version = extract_data(obj)['w_metadata'].status
-            if version == WorkflowStatus.HALTED:
-                objects.append(obj.id)
+    previous_object, next_object = get_previous_next_objects(
+        session.get("holdingpen_current_ids"),
+        objectid
+    )
 
-    previous_object, next_object = get_previous_next_objects(objects, objectid)
     formatted_data = bwobject.get_formatted_data(of)
     extracted_data = extract_data(bwobject)
 

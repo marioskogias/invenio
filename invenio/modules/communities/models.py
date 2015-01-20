@@ -66,15 +66,16 @@ from invenio.modules.communities.signals import before_save_collection, \
     before_delete_collection, after_delete_collection, \
     before_delete_collections, after_delete_collections, \
     pre_curation, post_curation
-from invenio.modules.search.models import \
+from invenio.modules.collections.models import \
     Collection, \
     Collectionname, \
     Collectiondetailedrecordpagetabs, \
     CollectionCollection, \
     Portalbox, \
     CollectionPortalbox, \
-    Format, \
     CollectionFormat
+from invenio.modules.formatter.models import Format
+from invenio.modules.records.api import get_record
 from invenio.modules.oaiharvester.models import OaiREPOSITORY
 
 
@@ -211,8 +212,7 @@ class Community(db.Model):
     @classmethod
     def from_recid(cls, recid, provisional=False):
         """Get user communities specified in recid."""
-        from invenio.legacy.search_engine import get_record
-        rec = get_record(recid)
+        rec = get_record(recid).legacy_create_recstruct()
         prefix = "%s-" % (
             cfg['COMMUNITIES_ID_PREFIX_PROVISIONAL']
             if provisional else cfg['COMMUNITIES_ID_PREFIX'])
@@ -307,8 +307,7 @@ class Community(db.Model):
         @param replace_func: Function to replace the collection id.
         @param include_func: Function to test if collection should be included
         """
-        from invenio.legacy.search_engine import get_record
-        rec = get_record(recid)
+        rec = get_record(recid).legacy_create_recstruct()
         newcolls = []
         dirty = False
 

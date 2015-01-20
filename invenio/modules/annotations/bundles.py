@@ -21,12 +21,12 @@
 
 from invenio.ext.assets import Bundle
 
-from invenio.modules.previewer.bundles import pdfjs as _pdfjs
+from invenio.modules.previewer.bundles import pdftk as _pdftk
 from invenio.modules.comments.bundles import (js as _commentsjs,
                                               css as _commentscss)
 
 
-_pdfjs.contents += ("js/annotations/pdf_notes_helpers.js",)
+_pdftk.contents += ("js/annotations/pdf_notes_helpers.js",)
 
 _commentsjs.contents += ("js/annotations/notes_popover.js",)
 _commentscss.contents += ("css/annotations/annotations.css",)

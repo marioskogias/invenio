@@ -23,7 +23,7 @@ import logging
 import os
 
 from datetime import datetime, timedelta
-from flask import url_for
+from flask import url_for, request
 from flask_oauthlib.client import prepare_request
 from mock import MagicMock
 try:
@@ -822,8 +822,58 @@ class OAuth2ProviderExpirationTestCase(ProviderTestCase):
         self.assert401(r)
 
 
+class RedisTestCase(ProviderTestCase):
+    def create_app(self):
+        app = super(ProviderTestCase, self).create_app()
+        app.testing = True
+        app.config.update(dict(
+            OAUTH2_CACHE_TYPE='redis',
+            CACHE_REDIS_URL='redis://:mypw@example.org:1234/2',
+        ))
+        return app
+
+    def test_cache_url(self):
+        """Test that CACHE_REDIS_URL is being properly used if set."""
+        from flask_oauthlib.contrib.cache import Cache
+
+        connargs = None
+        with self.app.test_request_context("/"):
+            # Let oauth2server initialize the right configuration variables.
+            self.app.try_trigger_before_first_request_functions()
+            # Now try to create the cache object and check it's connection
+            # properties
+            cache = Cache(self.app, 'OAUTH2')
+            connargs = cache.cache._client.connection_pool.connection_kwargs
+
+        assert self.app.config.get('OAUTH2_CACHE_REDIS_HOST')
+        self.assertEqual(self.app.config.get('OAUTH2_CACHE_TYPE'), 'redis')
+        self.assertEqual(connargs['host'], "example.org")
+        self.assertEqual(connargs['port'], 1234)
+        self.assertEqual(connargs['db'], 2)
+        self.assertEqual(connargs['password'], "mypw")
+
+
+class UtilsTestCase(InvenioTestCase):
+    def test_urleencode(self):
+        from invenio.modules.oauth2server.views.server import urlreencode
+
+        # Test encoding of unencoded colon which oauthlib will choke on if is
+        # not re-encoded,
+        testurl = '/test?a=b:d&a=d'
+
+        def test_fun(*args,  **kwargs):
+            pass
+
+        with self.app.test_request_context(testurl):
+            self.assertEqual(request.url, "http://localhost"+testurl)
+            urlreencode(test_fun)()
+            self.assertEqual(request.url, "http://localhost/test?a=b%3Ad&a=d")
+
+
 TEST_SUITE = make_test_suite(OAuth2ProviderTestCase,
-                             OAuth2ProviderExpirationTestCase)
+                             OAuth2ProviderExpirationTestCase,
+                             UtilsTestCase,
+                             RedisTestCase)
 
 
 if __name__ == "__main__":

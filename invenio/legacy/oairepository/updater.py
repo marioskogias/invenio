@@ -237,7 +237,7 @@ def print_repository_status(local_write_message=write_message,
         else:
             # Get the records that are *currently* exported for this
             # setSpec
-            current_recids = search_unit_in_bibxxx(p=set_spec, f=CFG_OAI_SET_FIELD, type='e')
+            current_recids = search_unit_in_bibxxx(p=set_spec, f=CFG_OAI_SET_FIELD, m='e')
             nb_current_recids = len(current_recids)
             # Get the records that *should* be in this set according to
             # the admin defined settings, and compute how many should be
@@ -284,7 +284,7 @@ def print_repository_status(local_write_message=write_message,
 
 def repository_size():
     """Read repository size"""
-    return len(search_unit_in_bibxxx(p="*", f=CFG_OAI_SET_FIELD, type="e"))
+    return len(search_unit_in_bibxxx(p="*", f=CFG_OAI_SET_FIELD, m="e"))
 
 ### MAIN ###
 def oairepositoryupdater_task():
@@ -296,6 +296,10 @@ def oairepositoryupdater_task():
         print_repository_status(verbose=report)
         return True
 
+    if run_sql("SELECT id FROM schTASK WHERE proc='bibupload:oairepository' AND status='WAITING'"):
+        write_message("Previous requests of oairepository still being elaborated. Let's skip this execution.")
+        return True
+
     initial_snapshot = {}
     for set_spec in all_set_specs():
         initial_snapshot[set_spec] = get_set_definitions(set_spec)
@@ -303,10 +307,10 @@ def oairepositoryupdater_task():
 
     task_update_progress("Fetching records to process")
 
-    recids_with_oaiid = search_unit_in_bibxxx(p='*', f=CFG_OAI_ID_FIELD, type='e')
+    recids_with_oaiid = search_unit_in_bibxxx(p='*', f=CFG_OAI_ID_FIELD, m='e')
     write_message("%s recids have an OAI ID" % len(recids_with_oaiid), verbose=2)
 
-    all_current_recids = search_unit_in_bibxxx(p='*', f=CFG_OAI_SET_FIELD, type='e')
+    all_current_recids = search_unit_in_bibxxx(p='*', f=CFG_OAI_SET_FIELD, m='e')
     no_more_exported_recids = intbitset(all_current_recids)
     write_message("%s recids are currently exported" % (len(all_current_recids)), verbose=2)
 
@@ -320,7 +324,7 @@ def oairepositoryupdater_task():
         recids_for_set[set_spec] = should_recids
         no_more_exported_recids -= should_recids
         all_should_recids |= should_recids
-        current_recids = search_unit_in_bibxxx(p=set_spec, f=CFG_OAI_SET_FIELD, type='e')
+        current_recids = search_unit_in_bibxxx(p=set_spec, f=CFG_OAI_SET_FIELD, m='e')
         write_message("%s recids should be in %s. Currently %s are in %s" % (len(should_recids), set_spec, len(current_recids), set_spec), verbose=2)
         to_add = should_recids - current_recids
         write_message("%s recids should be added to %s" % (len(to_add), set_spec), verbose=2)
@@ -417,9 +421,9 @@ def oairepositoryupdater_task():
             write_message("Wrote to file %s" % filename)
             if not no_upload:
                 if task_get_option("notimechange"):
-                    task_low_level_submission('bibupload', 'oairepository', '-c', filename, '-n')
+                    task_low_level_submission('bibupload', 'oairepository', '-c', filename, '-n', '-Noairepository', '-P', '-1')
                 else:
-                    task_low_level_submission('bibupload', 'oairepository', '-c', filename)
+                    task_low_level_submission('bibupload', 'oairepository', '-c', filename, '-Noairepository', '-P', '-1')
             # Prepare to save results in a tmp file
             (fd, filename) = mkstemp(dir=CFG_TMPSHAREDDIR,
                                         prefix='oairepository_' + \

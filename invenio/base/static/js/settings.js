@@ -27,7 +27,7 @@ require.config({
     hgn: "vendors/requirejs-hogan-plugin/hgn",
     hogan: "vendors/hogan/web/builds/3.0.2/hogan-3.0.2.amd",
     text: "vendors/requirejs-hogan-plugin/text",
-    flight: "vendors/flight/lib",
+    flight: "vendors/flight",
     typeahead: "vendors/typeahead.js/dist/typeahead.bundle",
     "bootstrap-select": "js/bootstrap-select",
     "jquery-caret": "vendors/jquery.caret/dist/jquery.caret-1.5.2",
@@ -46,7 +46,11 @@ require.config({
     "jasmine-core": "vendors/jasmine/lib/jasmine-core/jasmine",
     "jasmine-html": "vendors/jasmine/lib/jasmine-core/jasmine-html",
     "jasmine-ajax": "vendors/jasmine-ajax/lib/mock-ajax",
+    "jasmine-flight": "vendors/jasmine-flight/lib/jasmine-flight",
     "jasmine-boot": "js/jasmine/boot",
+    "searchtypeahead-configuration": "js/search/default_typeahead_configuration",
+    "jasmine-events": "js/jasmine/events_checker",
+    "jasmine-initialization": "js/jasmine/initialization_checker",
   },
   shim: {
     jquery: {
@@ -114,19 +118,35 @@ require.config({
     "jasmine-core": {
       exports: "jasmineRequire"
     },
+    "jasmine-boot": {
+      exports: "jasmine",
+    },
     "jasmine-jquery": {
-      deps: ["jquery", "jasmine-boot"]
+      deps: ["jquery", "jasmine-boot"],
+      exports: "jasmine",
     },
     "jasmine-ajax": {
       deps: ["jasmine-boot"],
+      exports: "jasmine",
     },
     "jasmine-html": {
       deps: ["jasmine-core"],
       exports: "jasmineRequire"
     },
+    "jasmine-flight": {
+      deps: ["jasmine-boot", "jasmine-jquery"],
+      exports: "jasmine",
+    },
     "vendors/jasmine/lib/jasmine-core/boot": {
-      deps: ['jasmine-html'],
+      deps: ["jasmine-html"],
       exports: "window.onload",
+    },
+    "jasmine-events": {
+      deps: ["jasmine-jquery"],
+      exports: "jasmine.EventsChecker",
+    },
+    "jasmine-initialization": {
+      deps: ["jasmine-boot"],
     },
   }
 });

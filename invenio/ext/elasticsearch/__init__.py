@@ -18,22 +18,12 @@ def index_record(sender, recid):
 
 
 def create_index(sender, *args, **kwargs):
-    """
-    Create elasticsearch index
-    Configure mappings as found in mapping.cfg
-    """
-    print "Create index called"
     from flask import current_app
     es = current_app.extensions.get("elasticsearch")
     es.create_index()
 
 
 def drop_index(sender, *args, **kwargs):
-    """
-    Create elasticsearch index
-    Configure mappings as found in mapping.cfg
-    """
-    print "Delete index called"
     from flask import current_app
     es = current_app.extensions.get("elasticsearch")
     es.delete_index()
@@ -43,7 +33,6 @@ def setup_app(app):
     """Set up the extension for the given app."""
     es = ElasticSearchWrapper(app)
 
-    print "\n\n\n Before setting the handler\n\n\n\n"
     # initiate the query handler
     es.set_query_handler(QueryHandler())
 

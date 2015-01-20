@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
+##
 ## This file is part of Invenio.
-## Copyright (C) 2013, 2014 CERN.
+## Copyright (C) 2013, 2014, 2015 CERN.
 ##
 ## Invenio is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as
@@ -16,8 +17,7 @@
 ## along with Invenio; if not, write to the Free Software Foundation, Inc.,
 ## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
-"""
-Invenio is Fun.
+"""Invenio is Fun.
 
 Links
 -----
@@ -52,10 +52,6 @@ class _install_lib(install_lib):
         self.run_command('compile_catalog')
         install_lib.run(self)
 
-dependency_links = [
-    "git+git://github.com/mrjoes/flask-admin.git#egg=Flask-Admin-1.0.9.dev0",
-]
-
 install_requires = [
     "alembic>=0.6.6",
     "Babel>=1.3",
@@ -70,8 +66,7 @@ install_requires = [
     "feedparser>=5.1",
     "fixture>=1.5",
     "Flask>=0.10.1",
-    # Development version is used, will switch to >=1.0.9 once released.
-    "Flask-Admin>=1.0.9.dev0",
+    "Flask-Admin>=1.0.9",
     "Flask-Assets>=0.10",
     "Flask-Babel>=0.9",
     "Flask-Breadcrumbs>=0.2",
@@ -91,41 +86,42 @@ install_requires = [
     "Flask-WTF>=0.10.2",
     "fs>=0.4",
     "intbitset>=2.0",
+    "invenio-client>=0.1.0",
+    "invenio-query-parser>=0.2",
     "jellyfish>=0.3.2",
     "Jinja2>=2.7",
     "libmagic>=1.0",
     "lxml>=3.3",
     "mechanize>=0.2.5",
+    "mistune>=0.4.1",
     "msgpack-python>=0.3",
     "MySQL-python>=1.2.5",
     "numpy>=1.7",
     "nydus>=0.10.8",
     # pyparsing>=2.0.2 has a new api and is not compatible yet
     "pyparsing>=2.0.1,<2.0.2",
-    "python-twitter>=0.8.7",
+    "python-twitter>=2.0",
     "pyPDF>=1.13",
     "pyPDF2",
     "PyLD>=0.5.2",
     "pyStemmer>=1.3",
-    # python-dateutil>=2.0 is only for Python3
-    "python-dateutil>=1.5,<2.0",
+    "python-dateutil>=1.5",
     "python-magic>=0.4.6",
     "pytz",
     "rauth",
     "raven>=5.0.0",
     "rdflib>=4.1.2",
-    "redis==2.8.0",  # Is it explicitly required?
+    "redis>=2.8.0",
     "reportlab>=2.7,<3.2",
     "requests>=2.3,<2.4",
     "setuptools>=2.2",
     "six>=1.7.2",
     "Sphinx",
     "SQLAlchemy>=0.9.8",
-    "SQLAlchemy-Utils[encrypted]>=0.27",
+    "SQLAlchemy-Utils[encrypted]>=0.28.2",
     "unidecode",
     "workflow>=1.2.0",
-    # Flask-WTF 0.9.5 doesn't support WTForms 2.0 as of yet.
-    "WTForms>=1.0.5",
+    "WTForms>=2.0.1",
     "wtforms-alchemy>=0.12.6"
 ]
 
@@ -247,6 +243,7 @@ setup(
             'bibdocfile = invenio.legacy.bibdocfile.scripts.bibdocfile:main',
             'bibedit = invenio.legacy.bibedit.scripts.bibedit:main',
             'bibencode = invenio.modules.encoder.scripts.encoder:main',
+            'bibexport = invenio.legacy.bibexport.scripts.bibexport:main',
             'bibindex = invenio.legacy.bibindex.scripts.bibindex:main',
             'bibmatch = invenio.legacy.bibmatch.scripts.bibmatch:main',
             'bibrank = invenio.legacy.bibrank.scripts.bibrank:main',
@@ -273,7 +270,6 @@ setup(
             'textmarc2xmlmarc = invenio.legacy.bibrecord.scripts.textmarc2xmlmarc:main',
             'webaccessadmin = invenio.modules.access.scripts.webaccessadmin:main',
             'webauthorprofile = invenio.legacy.webauthorprofile.scripts.webauthorprofile:main',
-            'webcoll = invenio.legacy.websearch.scripts.webcoll:main',
             'webmessageadmin = invenio.legacy.webmessage.scripts.webmessageadmin:main',
             'webstatadmin = invenio.legacy.webstat.scripts.webstatadmin:main',
             'websubmitadmin = invenio.legacy.websubmit.scripts.websubmitadmin:main',
@@ -285,7 +281,6 @@ setup(
         ]
     },
     install_requires=install_requires,
-    dependency_links=dependency_links,
     extras_require=extras_require,
     classifiers=[
         'Development Status :: 4 - Beta',

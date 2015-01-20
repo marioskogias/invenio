@@ -88,15 +88,16 @@ To test above FlightJS component, create a spec file in
         });
     });
 
-To load fixtures (created under testsuite/js/**/*.html) for the test.
+
+Fixtures
+--------
+To load fixtures (created under ``testsuite/js/**/*.html``) for the test.
 Inside the spec file take following steps:
 
 .. code-block:: javascript
 
-   //specify the path of the fixture
    jasmine.getFixtures().fixturesPath =
        '/jasmine/spec/invenio.modules.<module_name>/';
-   //read specific fixture
    readFixtures('<fixture_name>')
 
 See https://github.com/flightjs/jasmine-flight for further examples how to test
@@ -170,4 +171,16 @@ def setup_app(app):
             specs_registry.register(
                 '../ext/jasmine/testsuite/js/jquery_object_mock.js',
                 'invenio.ext.jasmine/jquery_object_mock.js'
+            )
+            specs_registry.register(
+                '../ext/jasmine/testsuite/js/initialization_checker.spec.js',
+                'invenio.ext.jasmine/initialization_checker.spec.js'
+            )
+            specs_registry.register(
+                '../ext/jasmine/testsuite/js/events_checker.spec.js',
+                'invenio.ext.jasmine/events_checker.spec.js'
+            )
+            specs_registry.register(
+                '../ext/jasmine/testsuite/js/simple_div.html',
+                'invenio.ext.jasmine/simple_div.html'
             )

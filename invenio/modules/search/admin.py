@@ -28,7 +28,7 @@ except ImportError:
 
 from invenio.ext.admin.views import ModelView
 from invenio.ext.sqlalchemy import db
-from invenio.modules.search.models import FacetCollection, Collection
+from invenio.modules.collections.models import FacetCollection, Collection
 from invenio.modules.search.registry import facets
 
 
@@ -108,6 +108,8 @@ class FacetsAdmin(ModelView):
                 is_duplicated,
                 Required(),
             ],
+            'query_factory': lambda: [(facet_name, facet_name)
+                                      for facet_name in facets.keys()],
         },
     }
 
@@ -123,11 +125,6 @@ class FacetsAdmin(ModelView):
 
         :param app: flask application
         """
-        # these lines must be in the application context
-        with app.app_context():
-            # because of the access to FacetsRegistry
-            self.form_args['facet_name']['choices'] = \
-                [(facet_name, facet_name) for facet_name in facets.keys()]
         super(FacetsAdmin, self).__init__(*args, **kwargs)
 
 

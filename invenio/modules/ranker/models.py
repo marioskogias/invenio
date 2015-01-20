@@ -29,7 +29,7 @@ from invenio.ext.sqlalchemy import db
 from invenio.modules.accounts.models import User
 from invenio.modules.editor.models import Bibdoc
 from invenio.modules.records.models import Record as Bibrec
-from invenio.modules.search.models import Collection
+from invenio.modules.collections.models import Collection
 
 
 class RnkMETHOD(db.Model):
@@ -49,7 +49,7 @@ class RnkMETHOD(db.Model):
         try:
             if ln is None:
                 ln = g.ln
-            return self.name.filter_by(ln=g.ln, type='ln').one().value
+            return self.names.filter_by(ln=g.ln, type='ln').one().value
         except:
             return self.name
 

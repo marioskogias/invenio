@@ -23,12 +23,10 @@ define(
   [
      "js/workflows/details_preview",
      "js/workflows/details_preview_menu",
-     "js/workflows/actions/approval"
   ],
   function(
     DetailsPreview,
-    DetailsPreviewMenu,
-    ApprovalAction) {
+    DetailsPreviewMenu) {
 
     function initialize(context) {
       DetailsPreview.attachTo(document, {
@@ -36,11 +34,6 @@ define(
         id_object: context.id_object,
       });
       DetailsPreviewMenu.attachTo("#object-preview");
-
-      // Actions init
-      ApprovalAction.attachTo(document, {
-        action_url: context.action_url
-      });
     }
 
     return initialize;

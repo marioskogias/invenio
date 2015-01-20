@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 ##
 ## This file is part of Invenio.
-## Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013,
-##               2014 CERN.
+## Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015 CERN.
 ##
 ## Invenio is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as
@@ -1422,6 +1421,17 @@ def record_strip_empty_volatile_subfields(rec):
                            if subfield[1][:9] != "VOLATILE:"]
 
 
+def record_make_all_subfields_volatile(rec):
+    """
+    Turns all subfields to volatile
+    """
+    for tag in rec.keys():
+        for field_position, field in enumerate(rec[tag]):
+            for subfield_position, subfield in enumerate(field[0]):
+                if subfield[1][:9] != "VOLATILE:":
+                    record_modify_subfield(rec, tag, subfield[0], "VOLATILE:" + subfield[1],
+                        subfield_position, field_position_local=field_position)
+
 def record_strip_empty_fields(rec, tag=None):
     """
     Remove empty subfields and fields from the record.
@@ -1905,7 +1915,7 @@ def _create_record_lxml(marcxml,
     record = {}
     field_position_global = 0
 
-    controlfield_iterator = tree.iter(tag='controlfield')
+    controlfield_iterator = tree.iter(tag='{*}controlfield')
     for controlfield in controlfield_iterator:
         tag = controlfield.attrib.get('tag', '!').encode("UTF-8")
         ind1 = ' '
@@ -1921,7 +1931,7 @@ def _create_record_lxml(marcxml,
             record.setdefault(tag, []).append((subfields, ind1, ind2, text,
                                                field_position_global))
 
-    datafield_iterator = tree.iter(tag='datafield')
+    datafield_iterator = tree.iter(tag='{*}datafield')
     for datafield in datafield_iterator:
         tag = datafield.attrib.get('tag', '!').encode("UTF-8")
         ind1 = datafield.attrib.get('ind1', '!').encode("UTF-8")
@@ -1932,7 +1942,7 @@ def _create_record_lxml(marcxml,
         if ind2 in ('', '_'):
             ind2 = ' '
         subfields = []
-        subfield_iterator = datafield.iter(tag='subfield')
+        subfield_iterator = datafield.iter(tag='{*}subfield')
         for subfield in subfield_iterator:
             code = subfield.attrib.get('code', '!').encode("UTF-8")
             text = subfield.text

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ##
 ## This file is part of Invenio.
-## Copyright (C) 2012, 2013, 2014 CERN.
+## Copyright (C) 2012, 2013, 2014, 2015 CERN.
 ##
 ## Invenio is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as
@@ -63,12 +63,13 @@ PACKAGES = [
 ]
 
 PACKAGES_EXCLUDE = [
-    'invenio.modules.archiver',
     'invenio.modules.annotations',
+    'invenio.modules.archiver',
+    'invenio.modules.authors',
     'invenio.modules.communities',
-    'invenio.modules.pages',
     'invenio.modules.linkbacks',
     'invenio.modules.multimedia',
+    'invenio.modules.pages',
 ]
 
 LEGACY_WEBINTERFACE_EXCLUDE = [
@@ -292,16 +293,13 @@ CFG_BIBDOCFILE_PREFERRED_MIMETYPES_MAPPING = {
     'text/plain': '.txt',
     'video/mpeg': '.mpeg',
 }
-CFG_BIBEDIT_AUTOCOMPLETE_INSTITUTIONS_FIELDS = [
-    '100__u', '700__u', '701__u', '502__c', ]
 CFG_BIBEDIT_EXTEND_RECORD_WITH_COLLECTION_TEMPLATE = {'POETRY': 'record_poem'}
-CFG_BIBEDIT_KB_INSTITUTIONS = "InstitutionsCollection"
 CFG_BIBEDIT_KB_SUBJECTS = "Subjects"
 CFG_BIBEDIT_LOCKLEVEL = 3
 CFG_BIBEDIT_PROTECTED_FIELDS = ""
 CFG_BIBEDIT_QUEUE_CHECK_METHOD = "bibrecord"
 CFG_BIBEDIT_TIMEOUT = 3600
-CFG_BIBEDIT_ADD_TICKET_RT_QUEUES = "Authors,Conf_add+cor,Exp,Feedback,HEP_cor,HEP_ref,INST_add+cor,AUTHORS_long_list"
+CFG_BIBEDIT_ADD_TICKET_RT_QUEUES = []
 CFG_BIBEDITMULTI_LIMIT_DELAYED_PROCESSING = 20000
 CFG_BIBEDITMULTI_LIMIT_DELAYED_PROCESSING_TIME = "22:00-05:00"
 CFG_BIBEDITMULTI_LIMIT_INSTANT_PROCESSING = 2000
@@ -431,9 +429,11 @@ CFG_BIBSCHED_INCOMPATIBLE_TASKS = ()
 CFG_BIBSCHED_NEVER_STOPS = 0
 CFG_BIBSORT_BUCKETS = 1
 CFG_BIBSORT_ENABLED = 1
+CFG_BIBSORT_DEFAULT_FIELD = 'latest first'
+CFG_BIBSORT_DEFAULT_FIELD_ORDER = 'd'
 CFG_BIBUPLOAD_CONFLICTING_REVISION_TICKET_QUEUE = ""
 CFG_BIBUPLOAD_CONTROLLED_PROVENANCE_TAGS = ['6531_9', ]
-CFG_BIBUPLOAD_DELETE_FORMATS = ['hb', ]
+CFG_BIBUPLOAD_DELETE_FORMATS = ['hb', 'recjson']
 CFG_BIBUPLOAD_DISABLE_RECORD_REVISIONS = 0
 CFG_BIBUPLOAD_EXTERNAL_OAIID_PROVENANCE_TAG = "035__9"
 CFG_BIBUPLOAD_EXTERNAL_OAIID_TAG = "035__a"
@@ -517,11 +517,11 @@ CFG_OAI_LICENSE_TERMS_SUBFIELD = "a"
 CFG_OAI_LICENSE_URI_SUBFIELD = "u"
 CFG_OAI_LOAD = 500
 CFG_OAI_METADATA_FORMATS = {
-    'marcxml': ('XOAIMARC', 'http://www.openarchives.org/OAI/1.1/dc.xsd',
-                            'http://purl.org/dc/elements/1.1/'),
-    'oai_dc': ('XOAIDC',
-               'http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd',
-               'http://www.loc.gov/MARC21/slim'),
+    'oai_dc': ('XOAIMARC', 'http://www.openarchives.org/OAI/1.1/dc.xsd',
+                           'http://purl.org/dc/elements/1.1/'),
+    'marcxml': ('XOAIDC',
+                'http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd',
+                'http://www.loc.gov/MARC21/slim'),
 }
 CFG_OAI_PREVIOUS_SET_FIELD = "909COq"
 CFG_OAI_PROVENANCE_ALTERED_SUBFIELD = "t"

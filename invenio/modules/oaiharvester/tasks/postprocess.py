@@ -52,7 +52,7 @@ def post_process_selected(post_process):
     return _post_process_selected
 
 
-def convert_record_with_repository(stylesheet="oaidc2marcxml.xsl"):
+def convert_record_with_repository(stylesheet=""):
     """Convert a MARC record to another one thanks to the stylesheet.
 
     This function converts a record to a marcxml representation by using a
@@ -70,17 +70,11 @@ def convert_record_with_repository(stylesheet="oaidc2marcxml.xsl"):
     @wraps(convert_record_with_repository)
     def _convert_record(obj, eng):
         from invenio.modules.workflows.tasks.marcxml_tasks import convert_record
-        eng.log.info("my type: %s" % (obj.data_type,))
-        try:
-            if not obj.extra_data["repository"]["arguments"]['c_stylesheet']:
-                stylesheet_to_use = stylesheet
-            else:
-                stylesheet_to_use = obj.extra_data["repository"]["arguments"][
-                    'c_stylesheet']
-        except KeyError:
-            eng.log.error("WARNING: HASARDOUS BEHAVIOUR EXPECTED, "
-                          "You didn't specified style_sheet in argument for conversion,"
-                          "try to recover by using the default one!")
+        if not stylesheet:
+            repository = obj.extra_data.get("repository", {})
+            arguments = repository.get("arguments", {})
+            stylesheet_to_use = arguments.get('c_stylesheet')
+        else:
             stylesheet_to_use = stylesheet
         convert_record(stylesheet_to_use)(obj, eng)
 
@@ -192,12 +186,13 @@ def plot_extract(plotextractor_types=("latex",)):
         if "_result" not in obj.extra_data:
             obj.extra_data["_result"] = {}
 
-        if 'p_extraction-source' not in obj.extra_data["repository"][
-           "arguments"]:
+        repository = obj.extra_data.get("repository", {})
+        arguments = repository.get("arguments", {})
+
+        if 'p_extraction-source' not in arguments:
             p_extraction_source = plotextractor_types
         else:
-            p_extraction_source = obj.extra_data["repository"]["arguments"][
-                'p_extraction-source']
+            p_extraction_source = arguments.get('p_extraction-source', "")
 
         if not isinstance(p_extraction_source, list):
             p_extraction_source = [p_extraction_source]
@@ -413,10 +408,9 @@ def author_list(obj, eng):
         if match:
             obj.log.info("Found a match for author extraction")
 
-            if 'a_stylesheet' not in obj.extra_data["repository"]["arguments"]:
-                a_stylesheet = "authorlist2marcxml.xsl"
-            else:
-                a_stylesheet = obj.extra_data["repository"]["arguments"]["a_stylesheet"]
+            a_stylesheet = obj.extra_data["repository"]["arguments"].get(
+                "a_stylesheet"
+            ) or "authorlist2marcxml.xsl"
             authors = convert(xml_content, a_stylesheet)
             authorlist_record = create_records(authors)
             if len(authorlist_record) == 1:
@@ -453,9 +447,10 @@ def upload_step(obj, eng):
     from invenio.modules.records.api import Record
     from invenio.legacy.bibsched.bibtask import task_low_level_submission
 
+    repository = obj.extra_data.get("repository", {})
     sequence_id = random.randrange(1, 60000)
 
-    arguments = obj.extra_data["repository"]["arguments"]
+    arguments = repository.get("arguments", {})
 
     default_args = []
     default_args.extend(['-I', str(sequence_id)])
@@ -463,7 +458,6 @@ def upload_step(obj, eng):
         default_args.extend(['-N', arguments.get('u_name', "")])
     if arguments.get('u_priority', 5):
         default_args.extend(['-P', str(arguments.get('u_priority', 5))])
-    arguments = obj.extra_data["repository"]["arguments"]
 
     extract_path = os.path.join(
         cfg['CFG_TMPSHAREDDIR'],
@@ -473,7 +467,7 @@ def upload_step(obj, eng):
         os.makedirs(extract_path)
 
     filepath = extract_path + os.sep + str(obj.id)
-    if "f" in obj.extra_data["repository"]["postprocess"]:
+    if "f" in repository.get("postprocess", []):
         # We have a filter.
         file_uploads = [
             ("{0}.insert.xml".format(filepath), ["-i"]),
@@ -497,20 +491,24 @@ def upload_step(obj, eng):
                 task_id = task_low_level_submission("bibupload",
                                                     "oaiharvest",
                                                     *tuple(args))
-                create_oaiharvest_log_str(task_id,
-                                          obj.extra_data["repository"]["id"],
-                                          marcxml_value)
+                repo_id = repository.get("id")
+                if repo_id:
+                    create_oaiharvest_log_str(
+                        task_id,
+                        repo_id,
+                        obj.get_data()
+                    )
             except Exception as msg:
                 eng.log.error(
                     "An exception during submitting oaiharvest task occured : %s " % (
                         str(msg)))
     if task_id is None:
         eng.log.error("an error occurred while uploading %s from %s" %
-                      (filepath, obj.extra_data["repository"]["name"]))
+                      (filepath, repository.get("name", "Unknown")))
     else:
         eng.log.info(
             "material harvested from source %s was successfully uploaded" %
-            (obj.extra_data["repository"]["name"],))
+            (repository.get("name", "Unknown"),))
     eng.log.info("end of upload")
 
 
@@ -519,30 +517,47 @@ def filter_step(obj, eng):
     from invenio.modules.records.api import Record
     from invenio.utils.shell import run_shell_command
 
-    arguments = obj.extra_data["repository"]["arguments"]
-    script_name = arguments.get("f_filter-file", "")
-    marcxml_value = Record(obj.data.dumps()).legacy_export_as_marc()
-    extract_path = os.path.join(
-        cfg['CFG_TMPSHAREDDIR'],
-        str(eng.uuid)
-    )
-    if not os.path.exists(extract_path):
-        os.makedirs(extract_path)
-
-    # Now we launch BibUpload tasks for the final MARCXML files
-    marcxmlfile = extract_path + os.sep + str(obj.id)
-    file_fd = open(marcxmlfile, 'w')
-    file_fd.write(marcxml_value)
-    file_fd.close()
-
-    exitcode, cmd_stdout, cmd_stderr = run_shell_command(
-        cmd="%s '%s'",
-        args=(str(script_name),
-              str(marcxmlfile)))
-    if exitcode != 0 or cmd_stderr != "":
-        obj.log.error(
-            "Error while running filtering script on %s\nError:%s"
-            % (marcxmlfile, cmd_stderr)
+    repository = obj.extra_data.get("repository", {})
+    arguments = repository.get("arguments", {})
+    script_name = arguments.get("f_filter-file")
+    if script_name:
+        marcxml_value = Record(obj.data.dumps()).legacy_export_as_marc()
+        extract_path = os.path.join(
+            cfg['CFG_TMPSHAREDDIR'],
+            str(eng.uuid)
         )
+        if not os.path.exists(extract_path):
+            os.makedirs(extract_path)
+
+        # Now we launch BibUpload tasks for the final MARCXML files
+        marcxmlfile = extract_path + os.sep + str(obj.id)
+        file_fd = open(marcxmlfile, 'w')
+        file_fd.write(marcxml_value)
+        file_fd.close()
+
+        exitcode, cmd_stdout, cmd_stderr = run_shell_command(
+            cmd="%s '%s'",
+            args=(str(script_name),
+                  str(marcxmlfile)))
+        if exitcode != 0 or cmd_stderr != "":
+            obj.log.error(
+                "Error while running filtering script on %s\nError:%s"
+                % (marcxmlfile, cmd_stderr)
+            )
+        else:
+            obj.log.info(cmd_stdout)
     else:
-        obj.log.info(cmd_stdout)
+        obj.log.error("No script file found!")
+
+
+def check_record(obj, eng):
+    """Check if there is a valid record in the data.
+
+    If not, skip this object.
+    """
+    try:
+        assert obj.data
+        assert obj.data != '<?xml version="1.0"?>\n<collection/>\n'
+    except AssertionError as e:
+        obj.log.info("No data found in record. Skipping: {0}".format(str(e)))
+        eng.continueNextToken()

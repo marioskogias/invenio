@@ -35,6 +35,7 @@ Extensions
    ext/arxiv
    ext/crossref
    ext/elasticsearch
+   ext/jasmine
    ext/logging
    ext/login
    ext/session
@@ -70,6 +71,7 @@ Utilities
 
    utils/datastructures
    utils/washers
+   utils/forms
 
 Legacy
 ------

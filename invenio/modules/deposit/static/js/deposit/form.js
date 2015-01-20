@@ -1,6 +1,6 @@
 /*
  * This file is part of Invenio.
- * Copyright (C) 2013, 2014 CERN.
+ * Copyright (C) 2013, 2014, 2015 CERN.
  *
  * Invenio is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -22,7 +22,7 @@ define(function(require, exports, module) {
     'use strict';
 
     var $ = require('jquery'),
-        defineComponent = require('flight/component'),
+        defineComponent = require('flight/lib/component'),
         tpl_file_entry = require('hgn!./templates/file_entry'),
         tpl_file_link = require('hgn!./templates/file_link'),
         tpl_flash_message = require('hgn!./templates/flash_message'),
@@ -45,7 +45,6 @@ define(function(require, exports, module) {
     require('bootstrap-datetimepicker')
     // provides $.fn.typeahead
     require('typeahead')
-
   var empty_cssclass = "empty-element";
 
   return defineComponent(depositForm);
@@ -70,7 +69,7 @@ define(function(require, exports, module) {
         formSaveClass: '.form-save',
         formSubmitClass: '.form-submit',
         dynamicFieldListClass : ".dynamic-field-list",
-        pluploaderClass: ".pluploader"
+        uploaderSelector: "#uploader"
       });
 
   //
@@ -102,6 +101,7 @@ define(function(require, exports, module) {
    * Serialize a form
    */
   this.serialize_form = function(selector){
+
       // Sync CKEditor before serializing
       if (typeof CKEDITOR !== 'undefined') {
         $.each(CKEDITOR.instances, function(instance, editor) {
@@ -109,14 +109,33 @@ define(function(require, exports, module) {
         });
       }
       var fields = $(selector).serializeArray(),
-          $pluploader = $(this.attr.pluploaderClass);
+          uploader = this.select('uploaderSelector'),
+          $checkboxes = $('input[type=checkbox]:not(:checked)'),
+          $bootstrap_multiselect = $("[multiple=multiple]");
 
-      if ( $pluploader.length ) {
-        // There is a pluploader instance in the form
+      if (uploader.length) {
         fields.push({
           name: 'files',
-          value: $pluploader.data('pluploadWidget').val()
+          value: uploader.data('getOrderedFileList')()
         });
+      }
+
+      if ($bootstrap_multiselect.length && !$bootstrap_multiselect.val()) {
+        fields = fields.concat(
+          $bootstrap_multiselect.map(
+              function() {
+                return {name: this.name, value: $(this).val()}
+              }).get()
+        );
+      }
+
+      if ($checkboxes.length) {
+        fields = fields.concat(
+          $checkboxes.map(
+            function() {
+              return {name: this.name, value: ''}
+            }).get()
+        );
       }
       return serialize_object(fields);
   }
@@ -422,7 +441,7 @@ define(function(require, exports, module) {
    * @param data {Object}
    */
   this.onSaveField = function(ev, data) {
-    save_field(data.save_url, data.name, data.value);
+    save_field(this.attr.save_url, data.name, data.value);
   }
 
 
@@ -535,7 +554,7 @@ define(function(require, exports, module) {
    * Initialize dynamic field lists
    */
   var field_lists = {};
-  function init_field_lists(selector, url, autocomplete_selector, url_autocomplete) {
+  this.init_field_lists = function(selector, url, autocomplete_selector, url_autocomplete) {
     function serialize_and_save(options) {
       // Save list on remove element, sorting and paste of list
       var data = $('#'+options.prefix).serialize_object();
@@ -546,13 +565,15 @@ define(function(require, exports, module) {
 
     }
 
+    var that = this;
+
     function install_handler(options, element) {
       // Install save handler when adding new elements
       $(element).find(":input").change( function() {
           save_field(url, this.name, this.value);
       });
       $(element).find(autocomplete_selector).each(function (){
-          init_autocomplete(this, url, url_autocomplete);
+          that.init_autocomplete(this, url, url_autocomplete);
       });
     }
 
@@ -587,10 +608,34 @@ define(function(require, exports, module) {
   }
 
   /**
+   * Fired when text is pasted into an input
+   *
+   * @event paste
+   * @param event {Event}
+   */
+  this.onFieldPasted = function(event) {
+    var that=this;
+    /* timeout allows the pasted content to be available */
+    setTimeout(function () {
+      that.onFieldChanged(event);
+    }, 0);
+  }
+
+  this.onCheckboxChanged = function (event) {
+    if (event.target.name.indexOf('__input__') == -1 && event.target.name) {
+      if ($(event.target).prop("checked")) {
+        save_field(this.attr.save_url, event.target.name, event.target.value);
+      } else {
+        save_field(this.attr.save_url, event.target.name, '');
+      }
+    }
+  }
+
+  /**
    * Click form-button
    */
   this.onButtonClick = function (event) {
-    save_field(this.attr.save_url, this.name, true);
+    save_field(this.attr.save_url, event.target.name, true);
     return false;
   }
 
@@ -617,7 +662,9 @@ define(function(require, exports, module) {
   /**
    * Autocomplete initialization
    */
-  function init_autocomplete(selector, save_url, url_template, handle_selection) {
+  this.init_autocomplete = function(selector, save_url, url_template, handle_selection) {
+      var that = this;
+
       $(selector).each(function(){
           var item = this;
           var url = url_template.replace("__FIELDNAME__", item.name);
@@ -627,7 +674,11 @@ define(function(require, exports, module) {
           }
 
           if($(item).parents('.' + empty_cssclass).length === 0) {
-              init_typeaheadjs(item, url, save_url, handle_selection);
+              that.trigger("form:init-autocomplete", {
+                item: item,
+                url: url
+              });
+              connect_typeahead_events($(item), save_url, handle_selection);
           }
       });
   }
@@ -635,36 +686,54 @@ define(function(require, exports, module) {
   /**
    * Twitter typeahead.js support for autocompletion
    */
-  function init_typeaheadjs(item, url, save_url, handle_selection) {
-      var autocomplete_request = null;
+  function init_typeahead_dataengine($item, url) {
 
-      function source(query, process) {
-          if(autocomplete_request !== null){
-              autocomplete_request.abort();
-          }
-          $(item).addClass('ui-autocomplete-loading');
-          autocomplete_request = $.ajax({
-              type: 'GET',
-              url: url,
-              data: $.param({term: query, limit: $(item).data("autocomplete-limit")})
-          }).done(function(data) {
-              process(data);
-              $(item).removeClass('ui-autocomplete-loading');
-          }).fail(function(data) {
-              $(item).removeClass('ui-autocomplete-loading');
-          });
-      }
+    var engine = new Bloodhound({
+      datumTokenizer: Bloodhound.tokenizers.obj.whitespace('value'),
+      queryTokenizer: Bloodhound.tokenizers.whitespace,
+      remote: url + "?term=%QUERY&" + $.param({
+        limit: $item.data("autocomplete-limit")
+      }),
+    });
 
-      $(item).typeahead({
-            minLength: 1
-        },
-        {
-            source: source,
-            displayKey: 'value'
+    engine.initialize();
+
+    $item.typeahead({
+      minLength: 3
+    },
+    {
+      // after typeahead upgrade to 0.11 can be substituted with:
+      // source: this.engine.ttAdapter(),
+      // https://github.com/twitter/typeahead.js/issues/166
+      source: function(query, callback) {
+        // trigger can be deleted after typeahead upgrade to 0.11
+        $item.trigger('typeahead:asyncrequest');
+        engine.get(query, function(suggestions) {
+          $item.trigger('typeahead:asyncreceive');
+          callback(suggestions);
+        });
+      },
+      displayKey: 'value'
+    });
+  }
+
+  /**
+   * Connect events of typeahead
+   * @param $item
+   * @param save_url
+   * @param handle_selection
+   */
+  function connect_typeahead_events($item, save_url, handle_selection) {
+      $item.on('typeahead:selected', function(e, datum, name){
+          handle_selection(save_url, $item, datum, name);
       });
 
-      $(item).on('typeahead:selected', function(e, datum, name){
-          handle_selection(save_url, item, datum, name);
+      $item.on('typeahead:asyncrequest', function() {
+          $(this).addClass('ui-autocomplete-loading');
+      });
+
+      $item.on('typeahead:asynccancel typeahead:asyncreceive', function() {
+          $(this).removeClass('ui-autocomplete-loading');
       });
   }
 
@@ -722,6 +791,20 @@ define(function(require, exports, module) {
   }
 
   /**
+   * Inits typeahead autocomplete
+   *
+   * @event form:init-autocomplete
+   * @param ev {Event}
+   * @param data {Object}
+   */
+  this.initAutocomplete = function(ev, data) {
+    var $item = $(data.item);
+    if ($item.attr('data-autocomplete') == 'default') {
+      init_typeahead_dataengine($item, data.url);
+    }
+  }
+
+  /**
    * Split paste text into multiple fields and elements.
    */
   function paste_newline_splitter(field, data){
@@ -761,6 +844,7 @@ define(function(require, exports, module) {
     this.on('dataFormSubmit', this.submitForm);
     this.on('dataSaveField', this.onSaveField);
     this.on('handleFieldMessage', this.handleFieldMessage);
+    this.on("form:init-autocomplete", this.initAutocomplete);
 
     this.on(document, "click", {
       formSaveClass: this.onSaveClick,
@@ -768,10 +852,12 @@ define(function(require, exports, module) {
     });
 
     this.on(this.attr.formSelector + ' .form-button', "click", this.onButtonClick);
-    this.on('#submitForm input, #submitForm textarea, #submitForm select', "change", this.onFieldChanged);
+    this.on('#submitForm input[type!=checkbox], #submitForm textarea, #submitForm select', "change", this.onFieldChanged);
+    this.on('#submitForm input[type!=checkbox], #submitForm textarea, #submitForm select', "paste", this.onFieldPasted);
+    this.on('#submitForm input[type=checkbox]', 'change', this.onCheckboxChanged);
 
-    init_autocomplete('[data-autocomplete="1"]', this.attr.save_url, this.attr.autocomplete_url);
-    init_field_lists(this.attr.formSelector + ' .dynamic-field-list', this.attr.save_url, '[data-autocomplete="1"]', this.attr.autocomplete_url);
+    this.init_autocomplete('[data-autocomplete]', this.attr.save_url, this.attr.autocomplete_url);
+    this.init_field_lists(this.attr.formSelector + ' .dynamic-field-list', this.attr.save_url, '[data-autocomplete]', this.attr.autocomplete_url);
     init_ckeditor(this.attr.formSelector + ' textarea[data-ckeditor="1"]', this.attr.save_url);
     // Initialize rest of jquery plugins
     // Fix issue with typeahead.js drop-down partly cut-off due to overflow ???

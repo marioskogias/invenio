@@ -22,14 +22,23 @@ from __future__ import absolute_import
 
 import traceback
 import sys
-from uuid import uuid1 as new_uuid
 import base64
+
+from uuid import uuid1 as new_uuid
 from six import iteritems, reraise
 from six.moves import cPickle
 from workflow.engine import (GenericWorkflowEngine, ContinueNextToken,
                              HaltProcessing, StopProcessing, JumpTokenBack,
                              JumpTokenForward, WorkflowError)
-from .errors import WorkflowError as WorkflowErrorClient, WorkflowDefinitionError
+
+from invenio.ext.sqlalchemy import db
+
+from .errors import (
+    WorkflowError as WorkflowErrorClient,
+    WorkflowDefinitionError,
+    AbortProcessing,
+    SkipToken
+)
 from .models import (Workflow, BibWorkflowObject, BibWorkflowEngineLog,
                      ObjectVersion)
 from .utils import dictproperty
@@ -38,9 +47,6 @@ from .errors import WorkflowHalt
 from .signals import (workflow_finished,
                       workflow_halted,
                       workflow_started)
-from invenio.ext.sqlalchemy import db
-from invenio.config import CFG_DEVEL_SITE
-DEBUG = CFG_DEVEL_SITE > 0
 
 
 class WorkflowStatus(object):
@@ -186,32 +192,42 @@ class BibWorkflowEngine(GenericWorkflowEngine):
         """Return the objects associated with this workflow."""
         return self.db_obj.objects
 
-    @property
-    def final_objects(self):
-        """Return the objects associated with this workflow."""
+    def objects_of_statuses(self, statuses):
         results = []
         for obj in self.db_obj.objects:
-            if obj.version in [ObjectVersion.FINAL]:
+            if obj.version in statuses:
                 results.append(obj)
         return results
+
+    @property
+    def completed_objects(self):
+        """Return completed objects."""
+        return self.objects_of_statuses([ObjectVersion.COMPLETED])
 
     @property
     def halted_objects(self):
-        """Return the objects associated with this workflow."""
-        results = []
-        for obj in self.db_obj.objects:
-            if obj.version in [ObjectVersion.HALTED]:
-                results.append(obj)
-        return results
+        """Return halted objects."""
+        return self.objects_of_statuses([ObjectVersion.HALTED])
 
     @property
     def running_objects(self):
-        """Return the objects associated with this workflow."""
-        results = []
-        for obj in self.db_obj.objects:
-            if obj.version in [ObjectVersion.RUNNING]:
-                results.append(obj)
-        return results
+        """Return running objects."""
+        return self.objects_of_statuses([ObjectVersion.RUNNING])
+
+    @property
+    def initial_objects(self):
+        """Return initial objects."""
+        return self.objects_of_statuses([ObjectVersion.INITIAL])
+
+    @property
+    def waiting_objects(self):
+        """Return waiting objects."""
+        return self.objects_of_statuses([ObjectVersion.WAITING])
+
+    @property
+    def error_objects(self):
+        """Return error objects."""
+        return self.objects_of_statuses([ObjectVersion.ERROR])
 
     def __getstate__(self):
         """Pickling needed functions."""
@@ -277,7 +293,7 @@ BibWorkflowEngine
             filter(BibWorkflowObject.id_workflow == self.uuid).\
             filter(BibWorkflowObject.version.in_(
                 [ObjectVersion.INITIAL,
-                 ObjectVersion.FINAL]
+                 ObjectVersion.COMPLETED]
             )).group_by(BibWorkflowObject.version).all()
         return len(res) == 2 and res[0] == res[1]
 
@@ -399,35 +415,59 @@ BibWorkflowEngine
             if callbacks:
                 try:
                     self.run_callbacks(callbacks, objects, obj)
+                except SkipToken:
+                    msg = "Skipped running this object: '%s' (object: %s)" % \
+                          (str(callbacks), repr(obj))
+                    self.log.debug(msg)
+                    obj.log.debug(msg)
+                    continue
+                except AbortProcessing:
+                    msg = "Processing was aborted: '%s' (object: %s)" % \
+                          (str(callbacks), repr(obj))
+                    self.log.debug(msg)
+                    obj.log.debug(msg)
+                    break
                 except StopProcessing:
-                    if DEBUG:
-                        msg = "Processing was stopped: '%s' (object: %s)" % \
-                              (str(callbacks), repr(obj))
-                        self.log.debug(msg)
-                        obj.log.debug(msg)
+                    msg = "Processing was stopped: '%s' (object: %s)" % \
+                          (str(callbacks), repr(obj))
+                    self.log.debug(msg)
+                    obj.log.debug(msg)
+
+                    # Processing for the object is stopped!
+                    obj.save(version=ObjectVersion.COMPLETED)
+                    self.increase_counter_finished()
                     break
                 except JumpTokenBack as step:
                     if step.args[0] > 0:
                         raise WorkflowError("JumpTokenBack cannot"
                                             " be positive number")
-                    if DEBUG:
-                        self.log.debug('Warning, we go back [%s] objects' %
-                                       step.args[0])
+                    self.log.debug('Warning, we go back [%s] objects' %
+                                   step.args[0])
                     i[0] = max(-1, i[0] - 1 + step.args[0])
                     i[1] = [0]  # reset the callbacks pointer
+
+                    # This object is skipped for some reason. So we're done
+                    obj.save(version=ObjectVersion.COMPLETED)
+                    self.increase_counter_finished()
                 except JumpTokenForward as step:
                     if step.args[0] < 0:
                         raise WorkflowError("JumpTokenForward cannot"
                                             " be negative number")
-                    if DEBUG:
-                        self.log.debug('We skip [%s] objects' % step.args[0])
+                    self.log.debug('We skip [%s] objects' % step.args[0])
                     i[0] = min(len(objects), i[0] - 1 + step.args[0])
                     i[1] = [0]  # reset the callbacks pointer
+
+                    # This object is skipped for some reason. So we're done
+                    obj.save(version=ObjectVersion.COMPLETED)
+                    self.increase_counter_finished()
                 except ContinueNextToken:
-                    if DEBUG:
-                        self.log.debug('Stop processing for this object, '
-                                       'continue with next')
+                    self.log.debug('Stop processing for this object, '
+                                   'continue with next')
                     i[1] = [0]  # reset the callbacks pointer
+
+                    # This object is skipped for some reason. So we're done
+                    obj.save(version=ObjectVersion.COMPLETED)
+                    self.increase_counter_finished()
                     continue
                 except (HaltProcessing, WorkflowHalt) as e:
                     self.increase_counter_halted()
@@ -435,10 +475,9 @@ BibWorkflowEngine
                     obj.set_extra_data(extra_data)
                     workflow_halted.send(obj)
 
-                    if DEBUG:
-                        msg = 'Processing was halted at step: %s' % (i,)
-                        self.log.info(msg)
-                        obj.log.info(msg)
+                    msg = 'Processing was halted at step: %s' % (i,)
+                    self.log.info(msg)
+                    obj.log.info(msg)
 
                     # Re-raise the exception,
                     # this is the only case when a WFE can be completely
@@ -461,8 +500,8 @@ BibWorkflowEngine
                             id_workflow=self.uuid,
                             id_object=self.getCurrObjId(),
                         )
-            # We save the object once it is fully run through
-            obj.save(version=ObjectVersion.FINAL)
+            # We save each object once it is fully run through
+            obj.save(version=ObjectVersion.COMPLETED)
             self.increase_counter_finished()
             i[1] = [0]  # reset the callbacks pointer
         self.after_processing(objects, self)
@@ -584,3 +623,11 @@ BibWorkflowEngine
         for key, value in iteritems(kwargs):
             tmp[key] = value
         self.set_extra_data(tmp)
+
+    def abortProcessing(self):
+        """Abort current workflow execution without saving object."""
+        raise AbortProcessing
+
+    def skipToken(self):
+        """Skip current workflow object without saving it."""
+        raise SkipToken

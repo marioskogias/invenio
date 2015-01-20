@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ##
 ## This file is part of Invenio.
-## Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 CERN.
+## Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015 CERN.
 ##
 ## Invenio is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as
@@ -559,6 +559,13 @@ def bibupload(record, opt_mode=None, opt_notimechange=0, oai_rec_id="", pretend=
             # Update bibfmt with the format xm of this record
             modification_date = time.strftime('%Y-%m-%d %H:%M:%S', time.strptime(record_get_field_value(record, '005'), '%Y%m%d%H%M%S.0'))
             error = update_bibfmt_format(rec_id, rec_xml_new, 'xm', modification_date, pretend=pretend)
+
+            # Pre-generate recjson cache to prevent dog-piling behavior when
+            # concurrent processes call get_record at the same time and the
+            # does not exists (i.e. all process will try to generate and save
+            # the recjson)
+            from invenio.modules.records.api import get_record as _get_record
+            _get_record(rec_id, reset_cache=True)
 
             # Fire record signals.
             from invenio.base import signals

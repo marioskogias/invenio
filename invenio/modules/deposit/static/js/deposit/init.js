@@ -17,9 +17,12 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
  */
 
-require(['js/deposit/form', 'js/deposit/plupload'], function() {
-    /*
-     * It preloads js/deposit/form to give it a name so you're free to use it
-     * from any places.
-     */
-})
+require([
+    'jquery',
+    'js/deposit/form',
+    'js/deposit/uploader/uploader',
+    "js/deposit/uploader/uploaders/pluploader",
+    "js/deposit/uploader/uploaders/dropboxuploader",
+    "js/deposit/uploader/ui/filelist",
+    "js/deposit/uploader/ui/errorlist"
+], function() {});

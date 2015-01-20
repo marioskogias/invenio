@@ -33,12 +33,43 @@ from __future__ import print_function
 
 import base64
 import os
+import re
 import sqlalchemy
 import sys
 
 from intbitset import intbitset
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import class_mapper, properties
+from sqlalchemy.orm.collections import (
+    InstrumentedList,
+    attribute_mapped_collection,
+    collection,
+)
+
+first_cap_re = re.compile('(.)([A-Z][a-z]+)')
+all_cap_re = re.compile('([a-z0-9])([A-Z])')
+
+
+class TableNameMixin(object):
+
+    """Define table name from class name."""
+
+    @declared_attr
+    def __tablename__(cls):
+        """Generate table name as class name with lower starting character."""
+        return cls.__name__[0].lower() + cls.__name__[1:]
+
+
+class TableFromCamelNameMixin(object):
+
+    """Define table name from class name."""
+
+    @declared_attr
+    def __tablename__(cls):
+        """Generate underscored table name from camel cased class name."""
+        s1 = first_cap_re.sub(r'\1_\2', cls.__name__)
+        return all_cap_re.sub(r'\1_\2', s1).lower()
 
 
 def get_model_type(ModelBase):
@@ -232,3 +263,102 @@ def test_sqla_utf8_chain():
     table.drop(bind=db.engine)
 
     print(" [OK]")
+
+
+class IntbitsetPickle(object):
+
+    """Pickle implementation for intbitset."""
+
+    def dumps(self, obj, protocol=None):
+        """Dump intbitset to byte stream."""
+        if obj is not None:
+            return obj.fastdump()
+        return intbitset([]).fastdump()
+
+    def loads(self, obj):
+        """Load byte stream to intbitset."""
+        try:
+            return intbitset(obj)
+        except:
+            return intbitset()
+
+
+def IntbitsetCmp(x, y):
+    """Compare two intbitsets."""
+    if x is None or y is None:
+        return False
+    else:
+        return x == y
+
+
+class OrderedList(InstrumentedList):
+
+    """Implemented ordered instrumented list."""
+
+    def append(self, item):
+        if self:
+            s = sorted(self, key=lambda obj: obj.score)
+            item.score = s[-1].score + 1
+        else:
+            item.score = 1
+        InstrumentedList.append(self, item)
+
+    def set(self, item, index=0):
+        if self:
+            s = sorted(self, key=lambda obj: obj.score)
+            if index >= len(s):
+                item.score = s[-1].score + 1
+            elif index < 0:
+                item.score = s[0].score
+                index = 0
+            else:
+                item.score = s[index].score + 1
+
+            for i, it in enumerate(s[index:]):
+                it.score = item.score + i + 1
+                # if s[i+1].score more then break
+        else:
+            item.score = index
+        InstrumentedList.append(self, item)
+
+    def pop(self, item):
+        # FIXME
+        if self:
+            obj_list = sorted(self, key=lambda obj: obj.score)
+            for i, it in enumerate(obj_list):
+                if obj_list[i] == item:
+                    return InstrumentedList.pop(self, i)
+
+
+def attribute_multi_dict_collection(creator, key_attr, val_attr):
+    """Define new attribute based mapping."""
+    class MultiMappedCollection(dict):
+
+        def __init__(self, data=None):
+            self._data = data or {}
+
+        @collection.appender
+        def _append(self, obj):
+            l = self._data.setdefault(key_attr(obj), [])
+            l.append(obj)
+
+        def __setitem__(self, key, value):
+            self._append(creator(key, value))
+
+        def __getitem__(self, key):
+            return tuple(val_attr(obj) for obj in self._data[key])
+
+        @collection.remover
+        def _remove(self, obj):
+            self._data[key_attr(obj)].remove(obj)
+
+        @collection.iterator
+        def _iterator(self):
+            for objs in self._data.itervalues():
+                for obj in objs:
+                    yield obj
+
+        def __repr__(self):
+            return '%s(%r)' % (type(self).__name__, self._data)
+
+    return MultiMappedCollection
