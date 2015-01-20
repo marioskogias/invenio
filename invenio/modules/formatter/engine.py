@@ -69,6 +69,7 @@ from invenio.legacy.bibrecord import \
      record_empty
 from . import registry
 from .engines import xslt
+from .models import Format
 from invenio.base.i18n import \
      language_list_long, \
      wash_language, \
@@ -1731,10 +1732,13 @@ def get_output_format_attrs(code, verbose=0):
     if filename is None:
         return attrs
 
-    attrs['names'] = bibformat_dblayer.get_output_format_names(code)
-    attrs['description'] = bibformat_dblayer.get_output_format_description(code)
-    attrs['content_type'] = bibformat_dblayer.get_output_format_content_type(code)
-    attrs['visibility'] = bibformat_dblayer.get_output_format_visibility(code)
+    format_ = Format.query.filter_by(code=code).one()
+    attrs['names']['generic'] = format_.name
+    for name in format_.names:
+        attrs['names'][name.type][name.ln] = name.value
+    attrs['description'] = format_.description
+    attrs['content_type'] = format_.content_type
+    attrs['visibility'] = format_.visibility
 
     return attrs
 

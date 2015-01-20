@@ -272,41 +272,6 @@ def set_output_format_visibility(code, visibility):
     params = (visibility, code.lower())
     run_sql(query, params)
 
-def get_existing_content_types():
-    """
-    Returns the list of all MIME content-types used in existing output
-    formats.
-
-    Always returns at least a list with 'text/html'
-
-    @return: a list of content-type strings
-    """
-    query = "SELECT DISTINCT content_type FROM format GROUP BY content_type"
-    res = run_sql(query)
-
-    if res is not None:
-        res = [val[0] for val in res if len(val) > 0]
-        if not 'text/html' in res:
-            res.append('text/html')
-        return res
-    else:
-        return ['text/html']
-
-def get_output_format_content_type(code):
-    """
-    Returns the content_type of the output format given by code
-
-    If code or content_type does not exist, return empty string
-
-    @param code: the code of the output format to get the description from
-    @return: output format content_type
-    """
-    res = run_sql("SELECT content_type FROM format WHERE code=%s", (code,))
-    if len(res) > 0:
-        res = res[0][0]
-        if res is not None:
-            return res
-    return ""
 
 def set_output_format_content_type(code, content_type):
     """
@@ -327,43 +292,6 @@ def set_output_format_content_type(code, content_type):
     params = (content_type, code.lower())
     run_sql(query, params)
 
-
-def get_output_format_names(code):
-    """
-    Returns the localized names of the output format designated by 'code'
-
-    The returned object is a dict with keys 'ln' (for long name) and 'sn' (for short name),
-    containing each a dictionary with languages as keys.
-    The key 'generic' contains the generic name of the output format (for use in admin interface)
-    For eg::
-           {'ln':{'en': "a long name", 'fr': "un long nom", 'de': "ein lange Name"},
-           'sn':{'en': "a name", 'fr': "un nom", 'de': "ein Name"}
-           'generic': "a name"}
-
-    The returned dictionary is never None. The keys 'ln' and 'sn' are always present. However
-    only languages present in the database are in dicts 'sn' and 'ln'. language "CFG_SITE_LANG" is always
-    in dict.
-
-    The localized names of output formats are located in formatname table.
-
-    @param code: the code of the output format to get the names from
-    @return: a dict containing output format names
-    """
-    out = {'sn': {}, 'ln': {}, 'generic': ''}
-    output_format_id = get_output_format_id(code)
-    if output_format_id is None:
-        return out
-
-    res = run_sql("SELECT name FROM format WHERE code=%s", (code,))
-    if len(res) > 0:
-        out['generic'] = res[0][0]
-
-    query = "SELECT type, ln, value FROM formatname WHERE id_format='%s'" % output_format_id
-    res = run_sql(query)
-    for row in res:
-        if row[0] == 'sn' or row[0] == 'ln':
-            out[row[0]][row[1]] = row[2]
-    return out
 
 def set_output_format_name(code, name, lang="generic", type='ln'):
     """
@@ -450,31 +378,6 @@ def get_preformatted_record(recID, of, decompress=zlib.decompress):
     else:
         return None, None
 
-def get_preformatted_record_date(recID, of):
-    """
-    Returns the date of the last update of the cache for the considered
-    preformatted record in bibfmt
-
-    If corresponding record does not exist for given output format,
-    returns None
-
-    @param recID: the id of the record to fetch
-    @param of: the output format code
-    @return: the date of the last update of the cache, or None if not exist
-    """
-    # Decide whether to use DB slave:
-    if of in ('xm', 'recstruct'):
-        run_on_slave = False # for master formats, use DB master
-    else:
-        run_on_slave = True # for other formats, we can use DB slave
-    # Try to fetch preformatted record
-    query = "SELECT last_updated FROM bibfmt WHERE id_bibrec='%s' AND format='%s'" % (recID, of)
-    res = run_sql(query, run_on_slave=run_on_slave)
-    if res:
-        # record 'recID' is formatted in 'of', so return it
-        return "%s" % res[0][0]
-    else:
-        return None
 
 def save_preformatted_record(recID, of, res, needs_2nd_pass=False,
                              low_priority=False, compress=zlib.compress):
@@ -492,35 +395,3 @@ def save_preformatted_record(recID, of, res, needs_2nd_pass=False,
                     needs_2nd_pass = VALUES(needs_2nd_pass)
                """ % sql_str,
             (recID, of, start_date, formatted_record, needs_2nd_pass))
-
-
-
-## def keep_formats_in_db(output_formats):
-##     """
-##     Remove from db formats that are not in the list
-##     TOBE USED ONLY ONCE OLD BIBFORMAT IS REMOVED (or old behaviours will be erased...)
-##     """
-##     query = "SELECT code FROM format"
-##     res = run_sql(query)
-##     for row in res:
-##         if not row[0] in output_formats:
-##             query = "DELETE FROM format WHERE code='%s'"%row[0]
-
-## def add_formats_in_db(output_formats):
-##     """
-##     Add given formats in db (if not already there)
-##     """
-##     for output_format in output_format:
-
-##         if get_format_from_db(output_format) is None:
-##             #Add new
-##             query = "UPDATE TABLE format "
-##         else:
-##             #Update
-##             query = "UPDATE TABLE format "
-
-##     query = "UPDATE TABLE format "
-##     res = run_sql(query)
-##     for row in res:
-##         if not row[0] in output_formats:
-##             query = "DELETE FROM format WHERE code='%s'"%row[0]
