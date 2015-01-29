@@ -34,13 +34,14 @@ from invenio.modules.search.cache import get_results_cache, set_results_cache
 from invenio.modules.search.errors import InvenioWebSearchWildcardLimitError
 from invenio.modules.search.models import Field
 from invenio.modules.search.registry import units
-from invenio.modules.search.walkers.search_unit import SearchUnit
+#from invenio.modules.search.walkers.search_unit import SearchUnit
 from invenio.utils.serializers import deserialize_via_marshal
 
 re_word = re.compile(r'[\s]')
 
 
 def search(self, user_info=None, collection=None):
+    from invenio.modules.search.walkers.search_unit import SearchUnit
     """FIXME new API."""
     from invenio.modules.search.utils import get_records_that_can_be_displayed
     results = get_results_cache(self._query, collection)

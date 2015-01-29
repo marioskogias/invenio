@@ -33,7 +33,7 @@ class ElasticSearchWrapper(object):
         Only one Registry per application is allowed.
         """
         app.config.setdefault('ELASTICSEARCH_URL',
-                              'http://188.184.141.134:9200/')
+                              'http://83.212.85.79:9200/')
         app.config.setdefault('ELASTICSEARCH_INDEX', "invenio")
         app.config.setdefault('ELASTICSEARCH_NUMBER_OF_SHARDS', 1)
         app.config.setdefault('ELASTICSEARCH_NUMBER_OF_REPLICAS', 0)
@@ -241,6 +241,15 @@ class ElasticSearchWrapper(object):
                 docs = []
         errors += self._bulk_index_docs(docs, doc_type=doc_type, index=index)
         return errors
+
+    def _tmp_index_doc(self, doc):
+        if not self.enhancer:
+            self.enhancer = Enhancer()
+        enhanced_record = self.enhancer.enhance_rec_content(doc)
+        try:
+            self._bulk_index_docs([enhanced_record], doc_type="records", index="invenio")
+        except:
+            raise
 
     def search(self, query, index="invenio", doc_type="records", filters=None):
         """ query: the users' query

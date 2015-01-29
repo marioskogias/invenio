@@ -36,28 +36,36 @@ class Enhancer(object):
         """Add remove fields from the record to be stored in elasticsearch
            Here we will add all the calculated fields
         """
-        del record["__meta_metadata__"]
+        try:
+            del record["__meta_metadata__"]
+        except KeyError as e:
+            pass
+            #print "Record %s doesn't have %s" % (record["_id"], e)
         # FIXME handle mutliple collection types
         try:
             collections = [val.values()[0]
                            for val in record["collections"]]
         except KeyError as e:
-            print "Record %s doesn't have %s" % (record["_id"], e)
+            pass
+            #print "Record %s doesn't have %s" % (record["_id"], e)
 
         try:
             record['collections'] = collections
         except KeyError as e:
-            print "Record %s doesn't have %s" % (record["_id"], e)
+            pass
+            #print "Record %s doesn't have %s" % (record["_id"], e)
 
         try:
             record['title'] = record['title']['title']
         except KeyError as e:
-            print "Record %s doesn't have %s" % (record["_id"], e)
+            pass
+            #print "Record %s doesn't have %s" % (record["_id"], e)
 
         try:
             record['abstract'] = record['abstract']['summary']
         except KeyError as e:
-            print "Record %s doesn't have %s" % (record["_id"], e)
+            pass
+            #print "Record %s doesn't have %s" % (record["_id"], e)
 
         # get full text if any
         try:
@@ -73,6 +81,7 @@ class Enhancer(object):
             _add_variations(record["_first_author"])
 
         except KeyError as e:
-            print "Record %s doesn't have %s" % (record["_id"], e)
+            pass
+            #print "Record %s doesn't have %s" % (record["_id"], e)
 
         return record

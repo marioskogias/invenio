@@ -37,6 +37,7 @@ from invenio.modules.uploader.uploader_tasks import \
     save_master_format, \
     save_record, \
     update_pidstore,\
+    elasticsearch_upload,\
     validate
 
 
@@ -63,13 +64,15 @@ class insert(object):
                        )
             ]
         ),
+        #elasticsearch_upload(step=2),
         reserve_record_id(step=2),
         validate(step=3),
-        manage_attached_documents(step=4),
-        save_record(step=5),
-        update_pidstore(step=6),
-        save_master_format(step=7),
-        legacy(step=8),
+        #manage_attached_documents(step=4),
+        save_record(step=3),
+        update_pidstore(step=4),
+        elasticsearch_upload(step=5)
+        #save_master_format(step=7),
+        #legacy(step=8),
     ]
 
     post_tasks = [

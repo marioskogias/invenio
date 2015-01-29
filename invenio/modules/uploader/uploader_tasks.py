@@ -67,6 +67,20 @@ def return_recordids_only(records, **kwargs):
 ##############        Workflow tasks      #################
 ###########################################################
 
+def my_print(step):
+    def _my_print(obj, eng):
+        record = obj[1]
+        with open("/root/test/test", 'w') as f:
+            f.write(str(es))
+    return _my_print
+
+def elasticsearch_upload(step):
+    from flask import current_app
+    es = current_app.extensions.get("elasticsearch")
+    def _elasticsearch_upload(obj, eng):
+        record = obj[1].dumps()
+        es._tmp_index_doc(record)
+    return _elasticsearch_upload
 
 def raise_(ex):
     """Helper task to raise an exception."""
