@@ -36,7 +36,12 @@ def produce(self, fields=None):
     out = self.dumps(without_meta_metadata=True, with_calculated_fields=True,
                      keywords=fields)
 
+    with open("/root/test.txt", "a") as myfile:
+        myfile.write("start")
     for field, values in iteritems(out):
+        with open("/root/test.txt", "a") as myfile:
+            myfile.write("\n\n")
+            myfile.write(field)
         if field.startswith('__'):
             continue
         json_id = self.meta_metadata[field]['json_id']
@@ -57,6 +62,8 @@ def produce(self, fields=None):
                     #     # Not match, continue to next rule
                     #     continue
                     for subfield, value_or_function in iteritems(rule[1]):
+                        with open("/root/test.txt", "a") as myfile:
+                            myfile.write.(subfield, value_or_function)
                         try:
                             # Evaluate only non keyword values.
                             if value_or_function in __builtins__:
