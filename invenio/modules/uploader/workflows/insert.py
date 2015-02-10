@@ -69,7 +69,7 @@ class insert(object):
         validate(step=3),
         #manage_attached_documents(step=4),
         save_record(step=3),
-        #update_pidstore(step=4),
+        update_pidstore(step=4),
         elasticsearch_upload(step=5)
         #save_master_format(step=7),
         #legacy(step=8),
