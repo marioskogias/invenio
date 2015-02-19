@@ -167,10 +167,16 @@ class ElasticSearchWrapper(object):
         self.app.logger.info("Indexing: %d records for %s" % (len(docs),
                              doc_type))
         refresh_flag = self.app.config.get("DEBUG")
-        results = self.connection.bulk_index(index=index,
-                                             doc_type=doc_type, docs=docs,
-                                             id_field='_id',
-                                             refresh=refresh_flag)
+
+        def format_docs_for_insert(docs):
+            meta = {"index": {"_index": index, "_type": doc_type}}
+            for d in docs:
+                meta["index"]["_id"] = d["_id"]
+                yield meta
+                yield d
+
+        results = self.connection.bulk(body=format_docs_for_insert(docs),
+                                       refresh=refresh_flag)
         errors = []
         for it in results.get("items"):
             if it.get("index").get("error"):
@@ -264,7 +270,7 @@ class ElasticSearchWrapper(object):
         dsl_query = self.query_handler.process_query(query, filters)
 
         print "\n\n\n\nBefore the search\n\n\n\n"
-        results = self.connection.search(dsl_query, index=index,
+        results = self.connection.search(body=dsl_query, index=index,
                                          doc_type=doc_type)
 
         print "\n\n\nGot the results back\n\n\n\n"
