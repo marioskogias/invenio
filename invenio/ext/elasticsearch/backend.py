@@ -159,7 +159,7 @@ class ElasticSearchWrapper(object):
             self.connection.put_mapping(index=index, doc_type=doc_type,
                                         mapping=mapping_cfg)
         except:
-            return False
+            raise
         return True
 
     def _bulk_index_docs(self, docs, doc_type, index):
@@ -173,10 +173,12 @@ class ElasticSearchWrapper(object):
                                              id_field='_id',
                                              refresh=refresh_flag)
         errors = []
-        # for it in results.get("items"):
-        #    if it.get("index").get("error"):
-        #        errors.append((it.get("index").get("_id"),
-        #                       it.get("index").get("error")))
+        for it in results.get("items"):
+            if it.get("index").get("error"):
+                errors.append((it.get("index").get("_id"),
+                               it.get("index").get("error")))
+        if errors:
+            raise NameError("bulk_index")
         return errors
 
     def _get_record(self, recid):
@@ -240,6 +242,8 @@ class ElasticSearchWrapper(object):
                                                 index=index)
                 docs = []
         errors += self._bulk_index_docs(docs, doc_type=doc_type, index=index)
+        if errors:
+            raise NameError("_index_docs")
         return errors
 
     def _tmp_index_doc(self, doc):
@@ -260,8 +264,10 @@ class ElasticSearchWrapper(object):
         # create elasticsearch query
         dsl_query = self.query_handler.process_query(query, filters)
 
+        print "\n\n\n\nBefore the search\n\n\n\n"
         results = self.connection.search(dsl_query, index=index,
                                          doc_type=doc_type)
 
+        print "\n\n\nGot the results back\n\n\n\n"
         view_results = self.results_handler.process_results(results)
         return view_results

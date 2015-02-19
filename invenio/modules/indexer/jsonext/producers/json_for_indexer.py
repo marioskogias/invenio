@@ -36,31 +36,20 @@ def produce(self, fields=None):
     out = self.dumps(without_meta_metadata=True, with_calculated_fields=True,
                      keywords=fields)
 
-    with open("/root/test.txt", "a") as myfile:
-        myfile.write("start")
     for field, values in iteritems(out):
-        with open("/root/test.txt", "a") as myfile:
-            myfile.write("\n\n")
-            myfile.write("field: "+field+"\n")
         if field.startswith('__'):
             continue
         json_id = self.meta_metadata[field]['json_id']
         production_rules = get_producer_rules(json_id, 'json_for_indexer',
                                               self.additional_info['namespace']
                                              )
-        with open("/root/test.txt", "a") as myfile:
-            myfile.write("production_rules: "+str(production_rules)+"\n")
         tmp_dict = dict()
         new_val = None
         if not isinstance(values, (list, tuple)):
             values = (values, )
         for value in values:
-            with open("/root/test.txt", "a") as myfile:
-                myfile.write("value: "+str(value)+"\n")
             try:
                 for rule in production_rules:
-                    with open("/root/test.txt", "a") as myfile:
-                        myfile.write("rule: "+str(rule)+"\n")
                     # FIXME add support of indexer names.
                     # indexer_names = rule[0] if isinstance(rule[0], tuple) \
                     #     else (rule[0], )
@@ -73,8 +62,6 @@ def produce(self, fields=None):
                     # rule should not always return a dict
                     if isinstance(rule[1], dict):
                         for subfield, value_or_function in iteritems(rule[1]):
-                            with open("/root/test.txt", "a") as myfile:
-                                myfile.write("subfield: "+str(subfield)+" "+"val_or_fun: "+str(value_or_function)+ "\n")
                             try:
                                 # Evaluate only non keyword values.
                                 if value_or_function in __builtins__:
@@ -93,9 +80,7 @@ def produce(self, fields=None):
                                 self.continuable_errors.append(
                                     "Producer CError - Unable to produce "
                                     "'%s'.\n %s" % (field, str(e)))
-                        with open("/root/test.txt", "a") as myfile:
-                            myfile.write("tmp_dict: "+str(tmp_dict)+"\n")
-                        new_val = tmp_dict
+                        new_val = value.update(tmp_dict)
                     else:
                         value_or_function = rule[1]
                         try:

@@ -39,7 +39,20 @@ class Facets(UserDict):
     """Facet response objects."""
     def __init__(self, data):
         """New Facets instance."""
-        UserDict.__init__(self, data.get("aggregations"))
+        aggs = data.get("aggregations")
+        print "\nFacets\n\n\n"
+        print aggs
+        print "\n\n\n\n"
+
+        # Transform int years to string
+        for item in aggs["Year"]["buckets"]:
+            for k,v in item.iteritems():
+                item[k] = str(v)
+        print "\nFacets\n\n\n"
+        print aggs
+        print "\n\n\n\n"
+
+        UserDict.__init__(self, aggs)
 
 
 class Highlights(UserDict):

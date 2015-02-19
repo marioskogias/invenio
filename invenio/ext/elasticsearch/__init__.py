@@ -13,6 +13,9 @@ def index_record(sender, recid):
 
     :param recid: [int] recid to index
     """
+    with open("/root/indexing.log", 'a') as f:
+        f.write(str(recid))
+        f.write("\n")
     from .tasks import index_records
     return index_records.delay(sender, recid)
 

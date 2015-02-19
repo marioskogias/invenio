@@ -41,6 +41,7 @@ class Enhancer(object):
         except KeyError as e:
             pass
             #print "Record %s doesn't have %s" % (record["_id"], e)
+        """
         # FIXME handle mutliple collection types
         try:
             collections = [val.values()[0]
@@ -83,5 +84,5 @@ class Enhancer(object):
         except KeyError as e:
             pass
             #print "Record %s doesn't have %s" % (record["_id"], e)
-
+        """
         return record
