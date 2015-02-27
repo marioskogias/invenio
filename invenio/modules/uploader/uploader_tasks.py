@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
-#
-# This file is part of Invenio.
-# Copyright (C) 2014 CERN.
-#
-# Invenio is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License as
-# published by the Free Software Foundation; either version 2 of the
-# License, or (at your option) any later version.
-#
-# Invenio is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with Invenio; if not, write to the Free Software Foundation, Inc.,
-# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+##
+## This file is part of Invenio.
+## Copyright (C) 2014 CERN.
+##
+## Invenio is free software; you can redistribute it and/or
+## modify it under the terms of the GNU General Public License as
+## published by the Free Software Foundation; either version 2 of the
+## License, or (at your option) any later version.
+##
+## Invenio is distributed in the hope that it will be useful, but
+## WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+## General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with Invenio; if not, write to the Free Software Foundation, Inc.,
+## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """
 Uploader workflow tasks.
@@ -67,6 +67,20 @@ def return_recordids_only(records, **kwargs):
 ##############        Workflow tasks      #################
 ###########################################################
 
+def my_print(step):
+    def _my_print(obj, eng):
+        record = obj[1]
+        with open("/root/test/test", 'w') as f:
+            f.write(str(es))
+    return _my_print
+
+def elasticsearch_upload(step):
+    from flask import current_app
+    es = current_app.extensions.get("elasticsearch")
+    def _elasticsearch_upload(obj, eng):
+        record = obj[1].dumps()
+        es._tmp_index_doc(record)
+    return _elasticsearch_upload
 
 def raise_(ex):
     """Helper task to raise an exception."""
