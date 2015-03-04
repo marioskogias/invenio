@@ -30,65 +30,6 @@ from ..tokenizers.BibIndexTokenizer import BibIndexTokenizer
 from ..utils import load_tokenizers
 
 
-class IndexFactory(object):
-
-    """Abstract class for index factory."""
-
-    @abstractmethod
-    def get_index(self):
-        """Return a index.
-
-        :return: specific index class
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_engine(self):
-        """Return a engine.
-
-        :return: specific engine class
-        """
-        raise NotImplementedError()
-
-
-class NativeIndexFactory(IndexFactory):
-
-    """Configuration selector for native indexer."""
-
-    def get_index(self):
-        """Return a index.
-
-        :return: specific index class
-        """
-        return NativeIndex
-
-    def get_engine(self):
-        """Return a engine.
-
-        :return: specific engine class
-        """
-        return NativeIndexerConfigurationEngine
-
-
-class ElasticSearchIndexFactory(IndexFactory):
-
-    """Configuration selector for Elastic Search indexer."""
-
-    def get_index(self):
-        """Return a index.
-
-        :return: specific index class
-        """
-        return ElasticSearchIndex
-
-    def get_engine(self):
-        """Return a engine.
-
-        :return: specific engine class
-        """
-        return ElasticSearchIndexerConfigurationEngine
-
-
 class Index(object):
 
     """Describe a index (composed by fields)."""

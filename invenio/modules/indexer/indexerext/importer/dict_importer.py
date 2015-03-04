@@ -20,7 +20,7 @@
 """Module importer from dict for indexerext configuration."""
 
 from . import IndexerConfigurationImporter
-from ..config import IndexFactory, IndexerConfiguration, VirtualIndex
+from ..config import IndexerConfiguration, VirtualIndex
 
 
 class DictIndexerConfigurationImporter(IndexerConfigurationImporter):
@@ -33,7 +33,7 @@ class DictIndexerConfigurationImporter(IndexerConfigurationImporter):
         :param conf: dict configuration.
         :param factory: a IndexFactory object
         """
-        self.factory = factory or IndexFactory()
+        self.factory = factory
         self.conf = conf
 
     def load(self):
@@ -44,7 +44,7 @@ class DictIndexerConfigurationImporter(IndexerConfigurationImporter):
         indices = []
         for (name, index) in self.conf['indices'].iteritems():
             index['name'] = name
-            index_class = self.factory.get_index()
+            index_class = self.factory
             indices.append(index_class(**index))
 
         virtual_indices = []

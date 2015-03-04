@@ -25,7 +25,10 @@ import sys
 
 from invenio.ext.script import Manager
 
-from .indexerext.config import ElasticSearchIndexFactory, NativeIndexFactory
+from .indexerext.config import ElasticSearchIndex, NativeIndex, \
+        NativeIndexerConfigurationEngine,\
+        ElasticSearchIndexerConfigurationEngine
+
 from .indexerext.importer.json_importer import \
     JsonIndexerConfigurationImporter
 
@@ -70,10 +73,16 @@ class IndexerManager(object):
         :param indexer_name: indexer name (e.g. native or elasticsearch)
         :param filename: file name
         """
-        self.factory = self._load_factory(indexer_name=indexer_name)
         self.data = self._load_config(filename=filename)
+
+        if indexer_name == 'elasticsearch':
+            self.index_factory = ElasticSearchIndex
+            self.engine = ElasticSearchIndexerConfigurationEngine
+        else:
+            self.index_factory = NativeIndex
+            self.engine = NativeIndexerConfigurationEngine
+
         self.config = self._load_configuration()
-        self.engine = self._load_engine()
 
     def _load_config(self, filename=None):
         """Load the configuration.
@@ -93,16 +102,6 @@ class IndexerManager(object):
 
         return data
 
-    def _load_factory(self, indexer_name):
-        """Load factory.
-
-        :param indexer_name: indexer name (e.g. native or elasticsearch)
-        """
-        if indexer_name == 'elasticsearch':
-            return ElasticSearchIndexFactory()
-        else:
-            return NativeIndexFactory()
-
     def _load_configuration(self):
         """Load configuration."""
         importer = JsonIndexerConfigurationImporter(
@@ -111,12 +110,6 @@ class IndexerManager(object):
         )
         # TODO give the possibility to choice the importer
         return importer.load()
-
-    def _load_engine(self):
-        """Return a initialized engine."""
-        engine = self.factory.get_engine()
-        return engine(index_configuration=self.config)
-
 
 @manager.command
 @option_namespace

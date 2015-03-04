@@ -113,14 +113,13 @@ class TestJsonIndexerConfigurationImporter(InvenioTestCase):
     def test_loading_elasticsearch_index(self):
         """Test if load elastic search index."""
         import json
-        from ..indexerext.config import ElasticSearchIndex, \
-            ElasticSearchIndexFactory
+        from ..indexerext.config import ElasticSearchIndex
         from ..indexerext.importer.json_importer import \
             JsonIndexerConfigurationImporter
 
         importer = JsonIndexerConfigurationImporter(
             json_text=json.dumps(self.example1),
-            factory=ElasticSearchIndexFactory()
+            factory=ElasticSearchIndex
         )
         config = importer.load()
 
@@ -136,13 +135,13 @@ class TestJsonIndexerConfigurationImporter(InvenioTestCase):
     def test_loading_native_index(self):
         """Test if load native index."""
         import json
-        from ..indexerext.config import NativeIndex, NativeIndexFactory
+        from ..indexerext.config import NativeIndex
         from ..indexerext.importer.json_importer import \
             JsonIndexerConfigurationImporter
 
         importer = JsonIndexerConfigurationImporter(
             json_text=json.dumps(self.example1),
-            factory=NativeIndexFactory()
+            factory=NativeIndex
         )
         config = importer.load()
 
@@ -161,9 +160,11 @@ class TestJsonIndexerConfigurationImporter(InvenioTestCase):
         import json
         from ..indexerext.importer.json_importer import \
             JsonIndexerConfigurationImporter
+        from ..indexerext.config import NativeIndex
 
         importer = JsonIndexerConfigurationImporter(
-            json_text=json.dumps(self.example1))
+            json_text=json.dumps(self.example1),
+            factory=NativeIndex)
         config = importer.load()
 
         assert len(config.virtual_indices) == 3
