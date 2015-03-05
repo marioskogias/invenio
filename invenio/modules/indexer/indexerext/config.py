@@ -112,6 +112,13 @@ class Index(object):
                   "only with Field.", index_name=self.name))
         self._field = value
 
+    def put(self):
+        """Create or update the index"""
+        raise NotImplementedError()
+
+    def get(self, *args, **kwargs):
+        """Search in the specific index"""
+        raise NotImplementedError()
 
 class NativeIndex(Index):
 
@@ -204,17 +211,19 @@ class IndexerConfiguration(object):
 
     """Describe a indexer configuration."""
 
-    def __init__(self, virtual_indices):
+    def __init__(self, indices, virtual_indices):
         """Initialize class.
 
-        :param virtual_indices: list of virtual indices or single virtual index
+        :param indices: list of all indices
+        :param virtual_indices: list of virtual indices
         """
         self.virtual_indices = virtual_indices
+        self.indices = indices
 
     @property
     def virtual_indices(self):
         """Get virtual indices."""
-        return self._virtual_indices or []
+        return self.virtual_indices or []
 
     @virtual_indices.setter
     def virtual_indices(self, virtual_indices):
@@ -223,7 +232,19 @@ class IndexerConfiguration(object):
             if isinstance(virtual_indices, VirtualIndex) \
             else virtual_indices
 
-        self._virtual_indices = virtual_indices or []
+        self.virtual_indices = virtual_indices or []
+
+    @property
+    def virtual_index_dict(self):
+        res = dict()
+        reduce(lambda x: res.update({x.name: x}), self.virtual_indices)
+        return res
+
+    @property
+    def index_dict(self):
+        res = dict()
+        reduce(lambda x: res.update({x.name: x}), self.indices)
+        return res
 
     def filter_by_namespace(self, namespace=None):
         """Get the list of virtual indices of a specific namespace.
