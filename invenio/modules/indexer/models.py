@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
 #
-## This file is part of Invenio.
-## Copyright (C) 2011, 2012, 2013, 2014, 2015 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+# This file is part of Invenio.
+# Copyright (C) 2011, 2012, 2013, 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """Define database models for native indexer."""
 
@@ -61,6 +61,16 @@ class IdxINDEX(db.Model):
         )).values(cls.id)]
 
     @classmethod
+    def get_from_field(cls, field='global'):
+        """Return index instance corresponding to FIELD."""
+        index = cls.query.filter_by(name=field).first()
+        if index is None:
+            index = cls.query.join(IdxINDEXField).join(Field).filter(
+                Field.code == field
+            ).first()
+        return index
+
+    @classmethod
     def get_index_id_from_field(cls, field='global'):
         """Return index instance with name corresponding to FIELD.
 
@@ -69,32 +79,58 @@ class IdxINDEX(db.Model):
 
         Example: field='author', output=4.
         """
+        field = 'global' if not field else field
         index = cls.query.filter_by(name=field).value(cls.id)
         if index is None:
             index = cls.query.join(IdxINDEXField).join(Field).filter(
                 Field.code == field
             ).value(cls.id)
-        return index
+        return index or 0
 
     @classmethod
     def idxWORDF(cls, field, fallback=True):
         """Return correct word index for given field."""
-        model = globals().get('IdxWORD%02dF'.format(
+        model = globals().get('IdxWORD{:02d}F'.format(
             cls.get_index_id_from_field(field)))
         if fallback and model is None:
-            model = globals().get('IdxWORD%02dF'.format(
+            model = globals().get('IdxWORD{:02d}F'.format(
                 cls.get_index_id_from_field('anyfield')))
         return model
 
     @classmethod
     def idxPHRASEF(cls, field, fallback=True):
         """Return correct word index for given field."""
-        model = globals().get('IdxPHRASE%02dF'.format(
+        model = globals().get('IdxPHRASE{:02d}F'.format(
             cls.get_index_id_from_field(field)))
         if fallback and model is None:
-            model = globals().get('IdxPHRASE%02dF'.format(
+            model = globals().get('IdxPHRASE{:02d}F'.format(
                 cls.get_index_id_from_field('anyfield')))
         return model
+
+    @classmethod
+    def idxPHRASER(cls, field, fallback=True):
+        """Return correct word index for given field."""
+        model = globals().get('IdxPHRASE{:02d}R'.format(
+            cls.get_index_id_from_field(field)))
+        if fallback and model is None:
+            model = globals().get('IdxPHRASE{:02d}R'.format(
+                cls.get_index_id_from_field('anyfield')))
+        return model
+
+    @classmethod
+    def idxPAIRF(cls, field, fallback=True):
+        """Return correct pairs for given field."""
+        model = globals().get('IdxPAIR{:02d}F'.format(
+            cls.get_index_id_from_field(field)))
+        if fallback and model is None:
+            model = globals().get('IdxPAIR{:02d}F'.format(
+                cls.get_index_id_from_field('anyfield')))
+        return model
+
+    @property
+    def wordf(self):
+        """Return correct word index."""
+        return globals().get('IdxWORD{:02d}F'.format(self.id))
 
 
 class IdxINDEXIdxINDEX(db.Model):

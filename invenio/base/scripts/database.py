@@ -1,35 +1,39 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2013, 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2013, 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """Database script functions."""
 
 from __future__ import print_function
 
-import os
-import sys
-import shutil
 import datetime
 
+import os
+
+import sys
+
 from pipes import quote
+
 from flask import current_app
-from six import iteritems
+
 from invenio.ext.script import Manager, change_command_name, print_progress
+
+from six import iteritems
 
 manager = Manager(usage="Perform database operations")
 
@@ -53,15 +57,15 @@ def init(user='root', password='', yes_i_know=False):
     from invenio.ext.sqlalchemy import db
     from invenio.utils.text import wrap_text_in_a_box, wait_for_user
 
-    ## Step 0: confirm deletion
+    # Step 0: confirm deletion
     wait_for_user(wrap_text_in_a_box(
         "WARNING: You are going to destroy your database tables! Run first"
         " `inveniomanage database drop`."
     ))
 
-    ## Step 1: drop database and recreate it
+    # Step 1: drop database and recreate it
     if db.engine.name == 'mysql':
-        #FIXME improve escaping
+        # FIXME improve escaping
         args = dict((k, str(v).replace('$', '\$'))
                     for (k, v) in iteritems(current_app.config)
                     if k.startswith('CFG_DATABASE'))
@@ -99,51 +103,35 @@ def drop(yes_i_know=False, quiet=False):
     """Drop database tables."""
     print(">>> Going to drop tables and related data on filesystem ...")
 
-    from sqlalchemy import event
     from invenio.utils.date import get_time_estimator
     from invenio.utils.text import wrap_text_in_a_box, wait_for_user
-    from invenio.ext.sqlalchemy.utils import test_sqla_connection, test_sqla_utf8_chain
+    from invenio.ext.sqlalchemy.utils import test_sqla_connection, \
+        test_sqla_utf8_chain
     from invenio.ext.sqlalchemy import db, models
-    from invenio.legacy.bibdocfile.api import _make_base_dir
     from invenio.modules.jsonalchemy.wrappers import StorageEngine
 
-    ## Step 0: confirm deletion
+    # Step 0: confirm deletion
     wait_for_user(wrap_text_in_a_box(
         "WARNING: You are going to destroy your database tables and related "
         "data on filesystem!"))
 
-    ## Step 1: test database connection
+    # Step 1: test database connection
     test_sqla_connection()
     test_sqla_utf8_chain()
     list(models)
 
-    ## Step 2: disable foreign key checks
+    # Step 2: disable foreign key checks
     if db.engine.name == 'mysql':
         db.engine.execute('SET FOREIGN_KEY_CHECKS=0;')
 
-    ## Step 3: destroy associated data
+    # Step 3: destroy associated data
     try:
         from invenio.legacy.webstat.api import destroy_customevents
         msg = destroy_customevents()
         if msg:
             print(msg)
-    except:
+    except Exception:
         print("ERROR: Could not destroy customevents.")
-
-    ## FIXME: move to bibedit_model
-    def bibdoc_before_drop(target, connection_dummy, **kw_dummy):
-        print
-        print(">>> Going to remove records data...")
-        for (docid,) in db.session.query(target.c.id).all():
-            directory = _make_base_dir(docid)
-            if os.path.isdir(directory):
-                print('    >>> Removing files for docid =', docid)
-                shutil.rmtree(directory)
-        db.session.commit()
-        print(">>> Data has been removed.")
-
-    from invenio.modules.editor.models import Bibdoc
-    event.listen(Bibdoc.__table__, "before_drop", bibdoc_before_drop)
 
     tables = list(reversed(db.metadata.sorted_tables))
 
@@ -163,7 +151,7 @@ def drop(yes_i_know=False, quiet=False):
                         suffix=str(datetime.timedelta(seconds=e()[0])))
                 dropper(table)
                 dropped += 1
-            except:
+            except Exception:
                 print('\r', '>>> problem with dropping ', table)
                 current_app.logger.exception(table)
 
@@ -173,12 +161,12 @@ def drop(yes_i_know=False, quiet=False):
             print("ERROR: not all items were properly dropped.")
             print(">>> Dropped", dropped, 'out of', N)
 
-    _dropper(tables, '>>> Dropping {0} tables ...',
-             lambda table: table.drop(bind=db.engine))
-
     _dropper(StorageEngine.__storage_engine_registry__,
              '>>> Dropping {0} storage engines ...',
              lambda api: api.storage_engine.drop())
+
+    _dropper(tables, '>>> Dropping {0} tables ...',
+             lambda table: table.drop(bind=db.engine, checkfirst=True))
 
 
 @option_default_data
@@ -189,7 +177,8 @@ def create(default_data=True, quiet=False):
 
     from sqlalchemy import event
     from invenio.utils.date import get_time_estimator
-    from invenio.ext.sqlalchemy.utils import test_sqla_connection, test_sqla_utf8_chain
+    from invenio.ext.sqlalchemy.utils import test_sqla_connection, \
+        test_sqla_utf8_chain
     from invenio.ext.sqlalchemy import db, models
     from invenio.modules.jsonalchemy.wrappers import StorageEngine
 
@@ -207,7 +196,7 @@ def create(default_data=True, quiet=False):
         run_sql('ALTER TABLE collection_field_fieldvalue CHANGE id_fieldvalue id_fieldvalue mediumint(9) unsigned')
         #print(run_sql('SHOW CREATE TABLE collection_field_fieldvalue'))
 
-    from invenio.modules.search.models import CollectionFieldFieldvalue
+    from invenio.modules.collections.models import CollectionFieldFieldvalue
     event.listen(CollectionFieldFieldvalue.__table__, "after_create", cfv_after_create)
 
     tables = db.metadata.sorted_tables
@@ -228,7 +217,7 @@ def create(default_data=True, quiet=False):
                         suffix=str(datetime.timedelta(seconds=e()[0])))
                 creator(table)
                 created += 1
-            except:
+            except Exception:
                 print('\r', '>>> problem with creating ', table)
                 current_app.logger.exception(table)
 
@@ -284,11 +273,11 @@ def uri():
 
 
 def version():
-    """ Get running version of database driver."""
+    """Get running version of database driver."""
     from invenio.ext.sqlalchemy import db
     try:
         return db.engine.dialect.dbapi.__version__
-    except:
+    except Exception:
         import MySQLdb
         return MySQLdb.__version__
 
@@ -297,12 +286,12 @@ def version():
                 help='Display more details (driver version).')
 @change_command_name
 def driver_info(verbose=False):
-    """ Get name of running database driver."""
+    """Get name of running database driver."""
     from invenio.ext.sqlalchemy import db
     try:
         return db.engine.dialect.dbapi.__name__ + (('==' + version())
                                                    if verbose else '')
-    except:
+    except Exception:
         import MySQLdb
         return MySQLdb.__name__ + (('==' + version()) if verbose else '')
 

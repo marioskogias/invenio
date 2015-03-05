@@ -1,19 +1,19 @@
-## This file is part of Invenio.
-## Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+# This file is part of Invenio.
+# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 """
 WebStyle templates. Customize the look of pages of Invenio
 """
@@ -488,16 +488,15 @@ URI: http://%(host)s%(page)s
         @param referencenum: show (this) number of references in the references tab
         @param discussionnum: show (this) number of comments/reviews in the discussion tab
         """
-        from invenio.legacy.search_engine import \
-             get_restricted_collections_for_recid, \
-             is_record_in_any_collection
+        from invenio.modules.collections.cache import get_all_restricted_recids
+        from invenio.modules.collections.cache import is_record_in_any_collection
 
         # load the right message language
         _ = gettext_set_language(ln)
 
         # Prepare restriction flag
         restriction_flag = ''
-        if get_restricted_collections_for_recid(recid, recreate_cache_if_needed=False):
+        if recid in get_all_restricted_recids():
             restriction_flag = '<div class="restrictedflag"><span>%s</span></div>' % _("Restricted")
         elif not is_record_in_any_collection(recid, recreate_cache_if_needed=False):
             restriction_flag = '<div class="restrictedflag restrictedflag-pending"><span>%s</span></div>' % _("Restricted (Processing Record)")

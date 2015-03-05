@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2014 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """Record utility functions."""
 
@@ -38,13 +38,12 @@ from .api import get_record
 
 def get_unique_record_json(param):
     """API to query records from the database."""
-    from invenio.legacy.search_engine import perform_request_search
+    from invenio.modules.search.api import SearchEngine
     data, query = {}, {}
     data['status'] = 'notfound'
-
-    recid = perform_request_search(p=param)
+    recid = SearchEngine(param).search()
     if len(recid) == 1:
-        query = get_record(recid).dumps(clean=True)
+        query = get_record(recid[0]).dumps(clean=True)
         data['status'] = 'success'
     elif len(recid) > 1:
         data['status'] = 'multiplefound'
@@ -109,12 +108,12 @@ def references_nb_counts():
         return
 
     from invenio.legacy.bibrecord import record_get_field_instances
-    from invenio.legacy.search_engine import get_field_tags
+    from invenio.modules.search.models import Field
     from invenio.modules.records.api import get_record
 
     if not CFG_CERN_SITE:
         reftag = ""
-        reftags = get_field_tags("reference")
+        reftags = list(Field.get_field_tags("reference"))
         if reftags:
             reftag = reftags[0]
         tmprec = get_record(recid)

@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2013, 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2013, 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 """
 Holding Pen is a web interface overlay for all BibWorkflowObject's.
 
@@ -26,15 +26,21 @@ with halted workflows.
 For example, accepting submissions or other tasks.
 """
 
-import os
 import json
+import os
 
-from six import text_type
-
-from flask import (render_template, Blueprint, request, jsonify,
-                   url_for, flash, session, send_from_directory)
-from flask.ext.login import login_required
+from flask import (
+    Blueprint,
+    flash,
+    jsonify,
+    render_template,
+    request,
+    send_from_directory,
+    session,
+    url_for,
+)
 from flask.ext.breadcrumbs import default_breadcrumb_root, register_breadcrumb
+from flask.ext.login import login_required
 from flask.ext.menu import register_menu
 
 from invenio.base.decorators import templated, wash_arguments
@@ -42,15 +48,18 @@ from invenio.base.i18n import _
 from invenio.ext.principal import permission_required
 from invenio.utils.date import pretty_date
 
-from ..models import BibWorkflowObject, Workflow, ObjectVersion
-from ..registry import actions
-from ..utils import (sort_bwolist, extract_data, get_action_list,
+from six import text_type
+
+from ..acl import viewholdingpen
+from ..api import continue_oid_delayed, start_delayed
+from ..models import BibWorkflowObject, ObjectVersion, Workflow
+from ..registry import actions, workflows
+from ..utils import (extract_data, get_action_list,
                      get_formatted_holdingpen_object,
                      get_holdingpen_objects,
+                     get_previous_next_objects,
                      get_rendered_task_results,
-                     get_previous_next_objects)
-from ..api import continue_oid_delayed, start_delayed
-from ..acl import viewholdingpen
+                     sort_bwolist)
 
 blueprint = Blueprint('holdingpen', __name__, url_prefix="/admin/holdingpen",
                       template_folder='../templates',
@@ -58,12 +67,30 @@ blueprint = Blueprint('holdingpen', __name__, url_prefix="/admin/holdingpen",
 
 default_breadcrumb_root(blueprint, '.holdingpen')
 HOLDINGPEN_WORKFLOW_STATES = {
-    ObjectVersion.HALTED: {'message': _('Need Action'), 'class': 'danger'},
-    ObjectVersion.WAITING: {'message': _('Waiting'), 'class': 'warning'},
-    ObjectVersion.ERROR: {'message': _('Error'), 'class': 'danger'},
-    ObjectVersion.COMPLETED: {'message': _('Done'), 'class': 'success'},
-    ObjectVersion.INITIAL: {'message': _('New'), 'class': 'info'},
-    ObjectVersion.RUNNING: {'message': _('In process'), 'class': 'warning'}
+    ObjectVersion.HALTED: {
+        'message': _(ObjectVersion.name_from_version(ObjectVersion.HALTED)),
+        'class': 'danger'
+    },
+    ObjectVersion.WAITING: {
+        'message': _(ObjectVersion.name_from_version(ObjectVersion.WAITING)),
+        'class': 'warning'
+    },
+    ObjectVersion.ERROR: {
+        'message': _(ObjectVersion.name_from_version(ObjectVersion.ERROR)),
+        'class': 'danger'
+    },
+    ObjectVersion.COMPLETED: {
+        'message': _(ObjectVersion.name_from_version(ObjectVersion.COMPLETED)),
+        'class': 'success'
+    },
+    ObjectVersion.INITIAL: {
+        'message': _(ObjectVersion.name_from_version(ObjectVersion.INITIAL)),
+        'class': 'info'
+    },
+    ObjectVersion.RUNNING: {
+        'message': _(ObjectVersion.name_from_version(ObjectVersion.RUNNING)),
+        'class': 'warning'
+    }
 }
 
 
@@ -95,7 +122,10 @@ def maintable():
     """Display main table interface of Holdingpen."""
     bwolist = get_holdingpen_objects()
     action_list = get_action_list(bwolist)
-    tags = session.get("holdingpen_tags", list())
+    tags = session.get(
+        "holdingpen_tags",
+        [ObjectVersion.name_from_version(ObjectVersion.HALTED)]
+    )
 
     if 'version' in request.args:
         for key, value in ObjectVersion.MAPPING.items():
@@ -126,7 +156,7 @@ def details(objectid):
     from itertools import groupby
 
     of = "hd"
-    bwobject = BibWorkflowObject.query.get(objectid)
+    bwobject = BibWorkflowObject.query.get_or_404(objectid)
     previous_object, next_object = get_previous_next_objects(
         session.get("holdingpen_current_ids"),
         objectid
@@ -185,6 +215,7 @@ def details(objectid):
                            workflow_definition=workflow_definition,
                            versions=ObjectVersion,
                            pretty_date=pretty_date,
+                           workflow_class=workflows.get(extracted_data['w_metadata'].name),
                            )
 
 
@@ -206,7 +237,7 @@ def get_file_from_task_result(object_id=None, filename=None):
         }
 
     """
-    bwobject = BibWorkflowObject.query.get(object_id)
+    bwobject = BibWorkflowObject.query.get_or_404(object_id)
     task_results = bwobject.get_tasks_results()
     if filename in task_results and task_results[filename]:
         fileinfo = task_results[filename][0].get("result", dict())
@@ -220,7 +251,7 @@ def get_file_from_task_result(object_id=None, filename=None):
 @wash_arguments({'objectid': (int, 0)})
 def restart_record(objectid, start_point='continue_next'):
     """Restart the initial object in its workflow."""
-    bwobject = BibWorkflowObject.query.get(objectid)
+    bwobject = BibWorkflowObject.query.get_or_404(objectid)
 
     workflow = Workflow.query.filter(
         Workflow.uuid == bwobject.id_workflow).first()
@@ -276,13 +307,13 @@ def delete_multi(bwolist):
 @blueprint.route('/resolve', methods=['GET', 'POST'])
 @login_required
 @permission_required(viewholdingpen.name)
-@wash_arguments({'objectid': (text_type, '-1')})
+@wash_arguments({'objectid': (int, 0)})
 def resolve_action(objectid):
     """Resolve the action taken.
 
     Will call the resolve() function of the specific action.
     """
-    bwobject = BibWorkflowObject.query.get(int(objectid))
+    bwobject = BibWorkflowObject.query.get_or_404(objectid)
     action_name = bwobject.get_action()
     action_form = actions[action_name]
     res = action_form().resolve(bwobject)
@@ -292,11 +323,11 @@ def resolve_action(objectid):
 @blueprint.route('/entry_data_preview', methods=['GET', 'POST'])
 @login_required
 @permission_required(viewholdingpen.name)
-@wash_arguments({'objectid': (text_type, '0'),
+@wash_arguments({'objectid': (int, 0),
                  'of': (text_type, None)})
 def entry_data_preview(objectid, of):
     """Present the data in a human readble form or in xml code."""
-    bwobject = BibWorkflowObject.query.get(int(objectid))
+    bwobject = BibWorkflowObject.query.get_or_404(objectid)
     if not bwobject:
         flash("No object found for %s" % (objectid,))
         return jsonify(data={})
@@ -337,7 +368,10 @@ def load_table():
 
     :return: JSON formatted str from dict of DataTables args.
     """
-    tags = session.setdefault("holdingpen_tags", list())
+    tags = session.setdefault(
+        "holdingpen_tags",
+        [ObjectVersion.name_from_version(ObjectVersion.HALTED)]
+    )
     if request.method == "POST":
         if request.json and "tags" in request.json:
             tags = request.json["tags"]
@@ -346,10 +380,11 @@ def load_table():
         # We return here as DataTables will call a GET here after.
         return None
 
-    i_sortcol_0 = request.args.get('iSortCol_0',
-                                   session.get('iSortCol_0', 0))
+    i_sortcol_0 = int(
+        request.args.get('iSortCol_0', session.get('holdingpen_iSortCol_0', 4))
+    )
     s_sortdir_0 = request.args.get('sSortDir_0',
-                                   session.get('sSortDir_0', None))
+                                   session.get('holdingpen_sSortDir_0', "desc"))
 
     session["holdingpen_iDisplayStart"] = int(request.args.get(
         'iDisplayStart', session.get('iDisplayLength', 10))
@@ -362,25 +397,7 @@ def load_table():
     ) + 1
 
     bwobject_list = get_holdingpen_objects(tags)
-
-    if (i_sortcol_0 and s_sortdir_0)\
-            or ("holdingpen_iSortCol_0" in session
-                and "holdingpen_sSortDir_0" in session):
-        if i_sortcol_0:
-            i_sortcol = int(str(i_sortcol_0))
-        else:
-            i_sortcol = session["holdingpen_iSortCol_0"]
-
-        if not ('holdingpen_iSortCol_0' in session
-                and "holdingpen_sSortDir_0" in session):
-            bwobject_list = sort_bwolist(bwobject_list, i_sortcol, s_sortdir_0)
-        elif i_sortcol != session['holdingpen_iSortCol_0']\
-                or s_sortdir_0 != session['holdingpen_sSortDir_0']:
-            bwobject_list = sort_bwolist(bwobject_list, i_sortcol, s_sortdir_0)
-        else:
-            bwobject_list = sort_bwolist(bwobject_list,
-                                         session["holdingpen_iSortCol_0"],
-                                         session["holdingpen_sSortDir_0"])
+    bwobject_list = sort_bwolist(bwobject_list, i_sortcol_0, s_sortdir_0)
 
     session["holdingpen_iSortCol_0"] = i_sortcol_0
     session["holdingpen_sSortDir_0"] = s_sortdir_0

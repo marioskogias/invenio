@@ -1,20 +1,20 @@
 {#-
-## This file is part of Invenio.
-## Copyright (C) 2012, 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+# This file is part of Invenio.
+# Copyright (C) 2012, 2014 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 -#}
 {%- set is_root_collection = collection and collection.name == config.CFG_SITE_NAME -%}
 <rss version="2.0"
@@ -30,7 +30,7 @@
       : {{ collection.name|e }}
       {%- endif -%}
     </title>
-    <link>{{ config.CFG_SITE_URL if is_root_collection else url_for('search.collection', name=collection.name, _external=True) }}</link>
+    <link>{{ config.CFG_SITE_URL if is_root_collection else url_for('collections.collection', name=collection.name, _external=True) }}</link>
     <description>{{ config.CFG_SITE_NAME|e }}{{ _('latest documents') }}
       {%- if not is_root_collection -%}
       {{ ' ' }}in {{ collection.name|e }}

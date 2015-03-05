@@ -1,39 +1,43 @@
 # -*- coding: utf-8 -*-
-## This file is part of Invenio.
-## Copyright (C) 2012, 2013, 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+# This file is part of Invenio.
+# Copyright (C) 2012, 2013, 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """Models for BibWorkflow Objects."""
 
-import os
-import tempfile
 import base64
 import logging
-from six.moves import cPickle
-from six import iteritems, callable
+import os
+import tempfile
+
 from datetime import datetime
-from sqlalchemy import desc
-from sqlalchemy.orm.exc import NoResultFound
-from invenio.ext.sqlalchemy import db
-from invenio.ext.sqlalchemy.utils import session_manager
+
 from invenio.base.globals import cfg
 from invenio.base.utils import classproperty
 from invenio.ext.logging import deprecated
+from invenio.ext.sqlalchemy import db
+from invenio.ext.sqlalchemy.utils import session_manager
 
-from .logger import get_logger, BibWorkflowLogHandler
+from six import callable, iteritems
+from six.moves import cPickle
+
+from sqlalchemy import desc
+from sqlalchemy.orm.exc import NoResultFound
+
+from .logger import BibWorkflowLogHandler, get_logger
 
 
 class ObjectVersion(object):
@@ -54,6 +58,13 @@ class ObjectVersion(object):
                 "instead of ObjectVersion.FINAL")
     def FINAL(cls):
         return cls.COMPLETED
+
+    @classmethod
+    def name_from_version(cls, version):
+        try:
+            return cls.MAPPING.keys()[cls.MAPPING.values().index(version)]
+        except ValueError:
+            return None
 
 
 def get_default_data():
@@ -386,7 +397,10 @@ class BibWorkflowObject(db.Model):
         """Get the formatted representation for this object."""
         from .registry import workflows
         try:
-            workflow_definition = workflows[self.get_workflow_name()]
+            name = self.get_workflow_name()
+            if not name:
+                return ""
+            workflow_definition = workflows[name]
             formatted_data = workflow_definition.formatter(
                 self,
                 of=of
@@ -570,6 +584,13 @@ class BibWorkflowObject(db.Model):
         extra_data = self.get_extra_data()
         extra_data["_error_msg"] = msg
         self.set_extra_data(extra_data)
+
+    def reset_error_message(self):
+        """Reset the error message."""
+        extra_data = self.get_extra_data()
+        if "_error_msg" in extra_data:
+            del extra_data["_error_msg"]
+            self.set_extra_data(extra_data)
 
     def get_error_message(self):
         """Retrieve the error message, if any."""

@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2013, 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2013, 2014 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """Perform demosite operations."""
 
@@ -30,6 +30,8 @@ warnings.warn("Use of `inveniomanage demosite populate` is being deprecated. "
 import os
 import pkg_resources
 import sys
+
+from itertools import count
 
 from invenio.ext.script import Manager
 
@@ -102,23 +104,22 @@ def populate(packages=[], default_data=True, files=None,
                 print("ERROR: failed execution of", cmd)
                 sys.exit(1)
 
+    i = count(1).next
     for cmd in ["bin/bibdocfile --textify --with-ocr --recid 97",
                 "bin/bibdocfile --textify --all",
                 "bin/bibindex -u admin",
-                "bin/bibindex %d" % (job_id + 1,),
+                "bin/bibindex %d" % (job_id + i(),),
                 "bin/bibindex -u admin -w global",
-                "bin/bibindex %d" % (job_id + 2,),
+                "bin/bibindex %d" % (job_id + i(),),
                 "bin/bibreformat -u admin -o HB",
-                "bin/bibreformat %d" % (job_id + 3,),
-                "bin/webcoll -u admin",
-                "bin/webcoll %d" % (job_id + 4,),
+                "bin/bibreformat %d" % (job_id + i(),),
                 "bin/bibrank -u admin",
-                "bin/bibrank %d" % (job_id + 5,),
+                "bin/bibrank %d" % (job_id + i(),),
                 "bin/bibsort -u admin -R",
-                "bin/bibsort %d" % (job_id + 6,),
+                "bin/bibsort %d" % (job_id + i(),),
                 "bin/oairepositoryupdater -u admin",
-                "bin/oairepositoryupdater %d" % (job_id + 7,),
-                "bin/bibupload %d" % (job_id + 8,)]:
+                "bin/oairepositoryupdater %d" % (job_id + i(),),
+                "bin/bibupload %d" % (job_id + i(),)]:
         cmd = os.path.join(CFG_PREFIX, cmd)
         if os.system(cmd):
             print("ERROR: failed execution of", cmd)

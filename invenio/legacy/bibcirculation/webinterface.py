@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2008, 2009, 2010, 2011, 2012, 2013, 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 
 """Invenio Bibcirculation User (URLs) Interface.
@@ -34,7 +34,6 @@ from invenio.config import CFG_SITE_LANG, \
                            CFG_SITE_URL, \
                            CFG_SITE_SECURE_URL, \
                            CFG_ACCESS_CONTROL_LEVEL_SITE, \
-                           CFG_WEBSESSION_DIFFERENTIATE_BETWEEN_GUESTS, \
                            CFG_SITE_RECORD, \
                            CFG_CERN_SITE
 from invenio.legacy.webuser import getUid, page_not_authorized, isGuestUser, \
@@ -43,7 +42,7 @@ from invenio.legacy.webpage import page, pageheaderonly, pagefooteronly
 from invenio.ext.email import send_email
 from invenio.legacy.search_engine import create_navtrail_links, \
      guess_primary_collection_of_a_record, \
-     get_colID, check_user_can_view_record, \
+     check_user_can_view_record, \
      record_exists, get_fieldvalues
 from invenio.utils.url import redirect_to_url, \
                              make_canonical_urlargd
@@ -71,6 +70,10 @@ from invenio.legacy.bibcirculation.config import CFG_BIBCIRCULATION_ILLS_EMAIL, 
                                           CFG_BIBCIRCULATION_ILL_STATUS_NEW, \
                                           CFG_BIBCIRCULATION_ACQ_STATUS_NEW, \
                                           AMZ_ACQUISITION_IDENTIFIER_TAG
+
+from invenio.modules.collections.models import Collection
+get_colID = lambda name: Collection.query.filter_by(name=name).value('id')
+
 
 webstyle_templates = invenio.legacy.template.load('webstyle')
 websearch_templates = invenio.legacy.template.load('websearch')
@@ -952,16 +955,15 @@ class WebInterfaceHoldingsPages(WebInterfaceDirectory):
                                        navmenuid = 'yourbaskets')
 
         if isGuestUser(uid):
-            if not CFG_WEBSESSION_DIFFERENTIATE_BETWEEN_GUESTS:
-                return redirect_to_url(req, "%s/youraccount/login%s" % (
+            return redirect_to_url(req, "%s/youraccount/login%s" % (
+                CFG_SITE_SECURE_URL,
+                    make_canonical_urlargd({
+                'referer' : "%s/%s/%s/holdings/request%s" % (
                     CFG_SITE_SECURE_URL,
-                        make_canonical_urlargd({
-                    'referer' : "%s/%s/%s/holdings/request%s" % (
-                        CFG_SITE_SECURE_URL,
-                        CFG_SITE_RECORD,
-                        self.recid,
-                        make_canonical_urlargd(argd, {})),
-                    "ln" : argd['ln']}, {})), norobot=True)
+                    CFG_SITE_RECORD,
+                    self.recid,
+                    make_canonical_urlargd(argd, {})),
+                "ln" : argd['ln']}, {})), norobot=True)
 
         user_info = collect_user_info(req)
         (auth_code, auth_msg) = check_user_can_view_record(user_info, self.recid)
@@ -1046,16 +1048,15 @@ class WebInterfaceHoldingsPages(WebInterfaceDirectory):
                                        navmenuid = 'yourbaskets')
 
         if isGuestUser(uid):
-            if not CFG_WEBSESSION_DIFFERENTIATE_BETWEEN_GUESTS:
-                return redirect_to_url(req, "%s/youraccount/login%s" % (
+            return redirect_to_url(req, "%s/youraccount/login%s" % (
+                CFG_SITE_SECURE_URL,
+                    make_canonical_urlargd({
+                'referer' : "%s/%s/%s/holdings/request%s" % (
                     CFG_SITE_SECURE_URL,
-                        make_canonical_urlargd({
-                    'referer' : "%s/%s/%s/holdings/request%s" % (
-                        CFG_SITE_SECURE_URL,
-                        CFG_SITE_RECORD,
-                        self.recid,
-                        make_canonical_urlargd(argd, {})),
-                    "ln" : argd['ln']}, {})), norobot=True)
+                    CFG_SITE_RECORD,
+                    self.recid,
+                    make_canonical_urlargd(argd, {})),
+                "ln" : argd['ln']}, {})), norobot=True)
 
         user_info = collect_user_info(req)
         (auth_code, auth_msg) = check_user_can_view_record(user_info, self.recid)
@@ -1146,16 +1147,15 @@ class WebInterfaceHoldingsPages(WebInterfaceDirectory):
                                        navmenuid = 'yourbaskets')
 
         if isGuestUser(uid):
-            if not CFG_WEBSESSION_DIFFERENTIATE_BETWEEN_GUESTS:
-                return redirect_to_url(req, "%s/youraccount/login%s" % (
+            return redirect_to_url(req, "%s/youraccount/login%s" % (
+                CFG_SITE_SECURE_URL,
+                    make_canonical_urlargd({
+                'referer' : "%s/%s/%s/holdings/ill_request_with_recid%s" % (
                     CFG_SITE_SECURE_URL,
-                        make_canonical_urlargd({
-                    'referer' : "%s/%s/%s/holdings/ill_request_with_recid%s" % (
-                        CFG_SITE_SECURE_URL,
-                        CFG_SITE_RECORD,
-                        self.recid,
-                        make_canonical_urlargd(argd, {})),
-                    "ln" : argd['ln']}, {})))
+                    CFG_SITE_RECORD,
+                    self.recid,
+                    make_canonical_urlargd(argd, {})),
+                "ln" : argd['ln']}, {})))
 
 
         user_info = collect_user_info(req)
@@ -1244,16 +1244,15 @@ class WebInterfaceHoldingsPages(WebInterfaceDirectory):
                                        navmenuid = 'yourbaskets')
 
         if isGuestUser(uid):
-            if not CFG_WEBSESSION_DIFFERENTIATE_BETWEEN_GUESTS:
-                return redirect_to_url(req, "%s/youraccount/login%s" % (
+            return redirect_to_url(req, "%s/youraccount/login%s" % (
+                CFG_SITE_SECURE_URL,
+                    make_canonical_urlargd({
+                'referer' : "%s/%s/%s/holdings/ill_request_with_recid%s" % (
                     CFG_SITE_SECURE_URL,
-                        make_canonical_urlargd({
-                    'referer' : "%s/%s/%s/holdings/ill_request_with_recid%s" % (
-                        CFG_SITE_SECURE_URL,
-                        CFG_SITE_RECORD,
-                        self.recid,
-                        make_canonical_urlargd(argd, {})),
-                    "ln" : argd['ln']}, {})))
+                    CFG_SITE_RECORD,
+                    self.recid,
+                    make_canonical_urlargd(argd, {})),
+                "ln" : argd['ln']}, {})))
 
 
         user_info = collect_user_info(req)

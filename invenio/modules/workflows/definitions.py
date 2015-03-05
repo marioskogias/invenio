@@ -1,27 +1,26 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
-
+#
+# This file is part of Invenio.
+# Copyright (C) 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """Contains basic workflow types for use in workflow definitions."""
 
-
 import collections
+
 from six import string_types
 
 
@@ -65,32 +64,33 @@ class RecordWorkflow(WorkflowBase):
     @staticmethod
     def get_title(bwo):
         """Get the title."""
+        field_map = {"title": "title"}
         record = bwo.get_data()
         extracted_titles = []
         if hasattr(record, "get") and "title" in record:
             if isinstance(record["title"], str):
                 extracted_titles = [record["title"]]
             else:
-                for a_title in record["title"]:
-                    extracted_titles.append(record["title"][a_title])
-        return ", ".join(extracted_titles)
+                extracted_titles.append(record["title"][field_map["title"]])
+        return ", ".join(extracted_titles) or "No title found"
 
     @staticmethod
     def get_description(bwo):
         """Get the description (identifiers and categories) from the object data."""
         from invenio.modules.records.api import Record
-        from flask import render_template
+        from flask import render_template, current_app
 
         record = bwo.get_data()
+        final_identifiers = {}
         try:
             identifiers = Record(record.dumps()).persistent_identifiers
-            final_identifiers = [i['value'] for i in identifiers]
+            for values in identifiers.values():
+                final_identifiers.extend([i.get("value") for i in values])
         except Exception:
+            current_app.logger.exception("Could not get identifiers")
             if hasattr(record, "get"):
                 final_identifiers = [
-                    record.get(
-                        "system_control_number", {}
-                    ).get("value", 'No ids')
+                    record.get("system_control_number", {}).get("value", 'No ids')
                 ]
             else:
                 final_identifiers = []

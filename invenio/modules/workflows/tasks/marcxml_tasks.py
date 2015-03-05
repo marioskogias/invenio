@@ -1,29 +1,30 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2013, 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2013, 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """Set of function for harvesting."""
 
-import os
 import glob
+import os
 import traceback
 
 from functools import wraps
+
 from six import callable
 
 
@@ -49,7 +50,7 @@ def was_approved(obj, eng):
     return extra_data.get("approved", False)
 
 
-def convert_record_to_bibfield(obj, eng):
+def convert_record_to_bibfield(model=None):
     """Convert to record from MARCXML.
 
     Expecting MARCXML, this task converts it using the current configuration to a
@@ -58,11 +59,12 @@ def convert_record_to_bibfield(obj, eng):
     :param obj: Bibworkflow Object to process
     :param eng: BibWorkflowEngine processing the object
     """
-    from invenio.modules.workflows.utils import convert_marcxml_to_bibfield
-    obj.data = convert_marcxml_to_bibfield(obj.data)
-    eng.log.info("Field conversion succeeded")
-
-convert_record_to_bibfield.description = 'Get Record from MARCXML'
+    @wraps(convert_record_to_bibfield)
+    def _convert_record_to_bibfield(obj, eng):
+        from invenio.modules.workflows.utils import convert_marcxml_to_bibfield
+        obj.data = convert_marcxml_to_bibfield(obj.data, model)
+        eng.log.info("Field conversion succeeded")
+    return _convert_record_to_bibfield
 
 
 def get_files_list(path, parameter):

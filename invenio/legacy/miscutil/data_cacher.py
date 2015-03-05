@@ -1,33 +1,38 @@
 # -*- coding: utf-8 -*-
-
-## This file is part of Invenio.
-## Copyright (C) 2007, 2008, 2009, 2010, 2011 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2007, 2008, 2009, 2010, 2011, 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """
 Tool for caching important infos, which are slow to rebuild, but that
 rarely change.
 """
 
-from invenio.legacy.dbquery import run_sql, get_table_update_time
 import time
 
+from werkzeug.utils import cached_property
+
+from invenio.legacy.dbquery import run_sql, get_table_update_time
+
+
 class InvenioDataCacherError(Exception):
+
     """Error raised by data cacher."""
-    pass
+
 
 class DataCacher(object):
     """
@@ -103,4 +108,25 @@ class SQLDataCacher(DataCacher):
         DataCacher.__init__(self, cache_filler, timestamp_verifier)
 
 
+class DataCacherProxy(object):
+
+    """Proxy to data cacher."""
+
+    def __init__(self, data_cacher):
+        self.data_cacher = data_cacher
+
+    @cached_property
+    def _cache(self):
+        return self.data_cacher()
+
+    @property
+    def is_ok_p(self):
+        return self._cache.is_ok_p
+
+    @property
+    def cache(self):
+        return self._cache.cache
+
+    def recreate_cache_if_needed(self):
+        return self._cache.recreate_cache_if_needed()
 

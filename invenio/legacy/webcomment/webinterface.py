@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
-## Comments and reviews for records.
+# Comments and reviews for records.
 
-## This file is part of Invenio.
-## Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2012, 2013 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+# This file is part of Invenio.
+# Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2012, 2013 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """ Comments and reviews for records: web interface """
 
@@ -64,8 +64,7 @@ from invenio.config import \
 from invenio.legacy.webuser import getUid, page_not_authorized, isGuestUser, collect_user_info
 from invenio.legacy.webpage import page, pageheaderonly, pagefooteronly
 from invenio.legacy.search_engine import create_navtrail_links, \
-     guess_primary_collection_of_a_record, \
-     get_colID
+     guess_primary_collection_of_a_record
 from invenio.utils.url import redirect_to_url, \
                              make_canonical_urlargd
 from invenio.utils.html import get_mathjax_header
@@ -92,6 +91,7 @@ from invenio.legacy.bibdocfile.api import \
      stream_file, \
      decompose_file, \
      propose_next_docname
+from invenio.modules.collections.models import Collection
 
 class WebInterfaceCommentsPages(WebInterfaceDirectory):
     """Defines the set of /comments pages."""
@@ -182,9 +182,10 @@ class WebInterfaceCommentsPages(WebInterfaceDirectory):
             user_is_subscribed_to_discussion = False
             user_can_unsubscribe_from_discussion = False
 
-        unordered_tabs = get_detailed_page_tabs(get_colID(guess_primary_collection_of_a_record(self.recid)),
-                                                    self.recid,
-                                                    ln=argd['ln'])
+        col_id = Collection.query.filter_by(
+            name=guess_primary_collection_of_a_record(self.recid)).value('id')
+        unordered_tabs = get_detailed_page_tabs(col_id, self.recid,
+                                                ln=argd['ln'])
         ordered_tabs_id = [(tab_id, values['order']) for (tab_id, values) in iteritems(unordered_tabs)]
         ordered_tabs_id.sort(lambda x, y: cmp(x[1], y[1]))
         link_ln = ''
@@ -413,8 +414,8 @@ class WebInterfaceCommentsPages(WebInterfaceDirectory):
                         fp = open(os.path.join(dir_to_open, filename), "w")
                         # FIXME: temporary, waiting for wsgi handler to be
                         # fixed. Once done, read chunk by chunk
-##                         while formfield.file:
-##                             fp.write(formfield.file.read(10240))
+#                         while formfield.file:
+#                             fp.write(formfield.file.read(10240))
                         fp.write(formfield.file.read())
                         fp.close()
                         # Isn't this file too big?

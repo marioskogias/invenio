@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2009, 2010, 2011 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2009, 2010, 2011 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """
 Handle requests from the web interface for Knowledge Base.
@@ -107,13 +107,11 @@ def perform_request_knowledge_base_show(kb_id, ln=CFG_SITE_LANG, sortby="to",
     dyn_config = None
     collections = None
     if kb_type == 'd':
-        from invenio.legacy.search_engine \
-            import get_alphabetically_ordered_collection_list
+        from invenio.modules.collections.models import Collection
+        collections = [
+            c[0] for c in Collection.query.order_by('name').values('name')
+        ]
         dyn_config = kb.kbdefs.to_dict() if kb.kbdefs else {}
-        collections = []
-        collitems = get_alphabetically_ordered_collection_list()
-        for collitem in collitems:
-            collections.append(collitem[0])
     return bibknowledge_templates.tmpl_admin_kb_show(ln, kb_id, name,
                                                      mappings, sortby, startat,
                                                      kb_type, search_term,

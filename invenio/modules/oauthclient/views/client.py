@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2014, 2015 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """Client blueprint used to handle OAuth callbacks."""
 
@@ -23,17 +23,16 @@ from __future__ import absolute_import
 
 from flask import Blueprint, abort, current_app, request, session, url_for
 from flask.ext.login import user_logged_out
-from itsdangerous import TimedJSONWebSignatureSerializer, BadData
+from itsdangerous import BadData, TimedJSONWebSignatureSerializer
 from werkzeug.local import LocalProxy
 
 from invenio.base.globals import cfg
 from invenio.ext.sslify import ssl_required
 from invenio.utils.url import get_safe_redirect_target
 
-from ..client import oauth, handlers, disconnect_handlers, signup_handlers
-from ..handlers import authorized_default_handler, make_token_getter, \
-    make_handler, disconnect_handler, oauth_logout_handler, \
-    set_session_next_url
+from ..client import disconnect_handlers, handlers, oauth, signup_handlers
+from ..handlers import authorized_default_handler, disconnect_handler, \
+    make_handler, make_token_getter, oauth_logout_handler, set_session_next_url
 
 
 blueprint = Blueprint(
@@ -176,7 +175,9 @@ def authorized(remote_app=None):
         # Store next URL
         set_session_next_url(remote_app, state['next'])
     except (AssertionError, BadData):
-        abort(403)
+        if current_app.config.get('OAUTHCLIENT_STATE_ENABLED', True) or (
+           not(current_app.debug or current_app.testing)):
+            abort(403)
 
     return handlers[remote_app]()
 

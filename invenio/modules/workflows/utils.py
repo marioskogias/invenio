@@ -1,31 +1,32 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2012, 2013, 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2012, 2013, 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """Various utility functions for use across the workflows module."""
 
+from invenio.ext.cache import cache
+
 import msgpack
 
-from invenio.ext.cache import cache
 from .registry import workflows
 
 
-def convert_marcxml_to_bibfield(marcxml):
+def convert_marcxml_to_bibfield(marcxml, model=None):
     """Return a SmartJson representation of MARC XML string.
 
     This function converts a MARCXML string to a JSON-like
@@ -38,12 +39,17 @@ def convert_marcxml_to_bibfield(marcxml):
     """
     from invenio.modules.jsonalchemy.reader import Reader
     from invenio.modules.jsonalchemy.wrappers import SmartJson
+
+    if not model:
+        model = ["__default__"]
+
     if isinstance(marcxml, unicode):
         marcxml = marcxml.encode(errors='ignore')
     return Reader.translate(marcxml,
                             SmartJson,
                             master_format='marc',
-                            namespace='recordext')
+                            namespace='recordext',
+                            model=model)
 
 
 class BibWorkflowObjectIdContainer(object):
@@ -148,6 +154,23 @@ class dictproperty(object):
         return self._proxy(obj, self._fget, self._fset, self._fdel)
 
 
+def _sort_from_cache(name):
+    def _sorter(item):
+        try:
+            results = cache.get("workflows_holdingpen_{0}".format(item.id))
+            if results:
+                return msgpack.loads(results)[name]
+        except Exception:
+            from flask import current_app
+            current_app.logger.exception(
+                "Invalid format for object {0}: {1}".format(
+                    item.id,
+                    cache.get("workflows_holdingpen_{0}".format(item.id))
+                )
+            )
+    return _sorter
+
+
 def sort_bwolist(bwolist, iSortCol_0, sSortDir_0):
     """Sort a list of BibWorkflowObjects for DataTables."""
     should_we_reverse = False
@@ -158,9 +181,9 @@ def sort_bwolist(bwolist, iSortCol_0, sSortDir_0):
     elif iSortCol_0 == 1:
         bwolist.sort(key=lambda x: x.id, reverse=should_we_reverse)
     elif iSortCol_0 == 2:
-        bwolist.sort(key=lambda x: msgpack.loads(cache.get("workflows_holdingpen_{0}".format(x.id)))["title"], reverse=should_we_reverse)
+        bwolist.sort(key=_sort_from_cache("title"), reverse=should_we_reverse)
     elif iSortCol_0 == 3:
-        bwolist.sort(key=lambda x: msgpack.loads(cache.get("workflows_holdingpen_{0}".format(x.id)))["description"], reverse=should_we_reverse)
+        bwolist.sort(key=_sort_from_cache("description"), reverse=should_we_reverse)
     elif iSortCol_0 == 4:
         bwolist.sort(key=lambda x: x.created, reverse=should_we_reverse)
     elif iSortCol_0 == 5:
@@ -180,13 +203,16 @@ def parse_bwids(bwolist):
     return list(ast.literal_eval(bwolist))
 
 
-def get_holdingpen_objects(ptags=[]):
+def get_holdingpen_objects(ptags=None):
     """Get BibWorkflowObject's for display in Holding Pen.
 
     Uses DataTable naming for filtering/sorting. Work in progress.
     """
     from .models import (BibWorkflowObject,
                          ObjectVersion)
+
+    if ptags is None:
+        ptags = ObjectVersion.name_from_version(ObjectVersion.HALTED)
 
     tags_copy = ptags[:]
     version_showing = []
@@ -218,7 +244,7 @@ def get_holdingpen_objects(ptags=[]):
             }
             results.update(get_formatted_holdingpen_object(bwo))
 
-            if check_ssearch_over_data(ssearch, results):
+            if check_term_in_data(ssearch, results):
                 bwobject_list_tmp.append(bwo)
 
         bwobject_list = bwobject_list_tmp
@@ -250,7 +276,8 @@ def get_formatted_holdingpen_object(bwo, date_format='%Y-%m-%d %H:%M:%S.%f'):
         if results["date"] == bwo.modified.strftime(date_format):
             return results
     results = generate_formatted_holdingpen_object(bwo)
-    cache.set("workflows_holdingpen_{0}".format(bwo.id), msgpack.dumps(results))
+    if results:
+        cache.set("workflows_holdingpen_{0}".format(bwo.id), msgpack.dumps(results))
     return results
 
 
@@ -275,23 +302,25 @@ def generate_formatted_holdingpen_object(bwo, date_format='%Y-%m-%d %H:%M:%S.%f'
     return results
 
 
-def check_ssearch_over_data(ssearch, data):
-    """Check for DataTables search request.
+def check_term_in_data(term_list, data):
+    """Check each term if present in data dictionary values.
 
-    Checks if the data match with one of the search tags in data.
+    :param term_list: list of tags used for filtering.
+    :type term_list: list
 
-    :param ssearch: list of tags used for filtering.
     :param data: data to check.
+    :type data: dict
 
-    :return: True if present, False otherwise.
+    :return: True if all terms present, False otherwise.
     """
     total = 0
-    for terms in ssearch:
-        for datum in data:
-            if data[datum] and terms.lower() in data[datum].lower():
+    for term in term_list:
+        term = term.encode("utf-8")
+        for datum in data.values():
+            if datum and term.lower() in datum.lower():
                 total += 1
                 break
-    return total == len(ssearch)
+    return total == len(term_list)
 
 
 def get_pretty_date(bwo):

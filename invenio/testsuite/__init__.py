@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """Helper functions for building and running test suites."""
 
@@ -25,6 +25,7 @@ from __future__ import print_function, with_statement
 
 CFG_TESTUTILS_VERBOSE = 1
 
+import difflib
 import os
 import sys
 import time
@@ -45,6 +46,7 @@ from six import iteritems
 from six.moves.urllib.parse import urlsplit, urlunsplit
 from urllib import urlencode
 from itertools import chain, repeat
+from xml.dom.minidom import parseString
 
 try:
     from selenium import webdriver
@@ -208,6 +210,20 @@ class InvenioTestCase(TestCase):
     def shortDescription(self):
         """Return a short description of the test case."""
         return
+
+
+class InvenioXmlTestCase(InvenioTestCase):
+    def assertXmlEqual(self, got, want):
+        xml_lines = parseString(got).toprettyxml(encoding='utf-8').split('\n')
+        xml = '\n'.join(line for line in xml_lines if line.strip())
+        xml2_lines = parseString(want).toprettyxml(encoding='utf-8').split('\n')
+        xml2 = '\n'.join(line for line in xml2_lines if line.strip())
+        try:
+            self.assertEqual(xml, xml2)
+        except AssertionError:
+            for line in difflib.unified_diff(xml.split('\n'), xml2.split('\n')):
+                print(line.strip('\n'))
+            raise
 
 
 class FlaskSQLAlchemyTest(InvenioTestCase):

@@ -1,25 +1,26 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2014, 2015 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """Record models."""
 
 from flask import current_app
+from intbitset import intbitset
 from sqlalchemy.ext.declarative import declared_attr
 from werkzeug import cached_property
 
@@ -102,22 +103,36 @@ class Record(db.Model):
     @cached_property
     def is_restricted(self):
         """Return True is record is restricted."""
-        from invenio.legacy.search_engine import \
-            get_restricted_collections_for_recid
-
-        if get_restricted_collections_for_recid(
-                self.id, recreate_cache_if_needed=False):
-            return True
-        elif self.is_processed:
-            return True
-        return False
+        from invenio.modules.collections.cache import get_all_restricted_recids
+        return self.id in get_all_restricted_recids() or self.is_processed
 
     @cached_property
     def is_processed(self):
         """Return True is recods is processed (not in any collection)."""
-        from invenio.legacy.search_engine import is_record_in_any_collection
+        from invenio.modules.collections.cache import is_record_in_any_collection
         return not is_record_in_any_collection(self.id,
                                                recreate_cache_if_needed=False)
+
+    @classmethod
+    def filter_time_interval(cls, datetext, column='c'):
+        """Return filter based on date text and column type."""
+        column = cls.creation_date if column == 'c' else cls.modification_date
+        parts = datetext.split('->')
+        where = []
+        if len(parts) == 2:
+            if parts[0] != '':
+                where.append(column >= parts[0])
+            if parts[1] != '':
+                where.append(column <= parts[1])
+
+        else:
+            where.append(column.like(datetext + '%'))
+        return where
+
+    @classmethod
+    def allids(cls):
+        """Return all existing record ids."""
+        return intbitset(db.session.query(cls.id).all())
 
 
 class RecordMetadata(db.Model):

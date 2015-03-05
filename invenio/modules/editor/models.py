@@ -1,30 +1,28 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2011, 2012, 2013, 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2011, 2012, 2013, 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """Editor database models."""
 
-# General imports.
 from invenio.ext.sqlalchemy import db
-
-# Create your models here.
-
 from invenio.modules.records.models import Record as Bibrec
+
+from sqlalchemy import event
 
 
 class BibHOLDINGPEN(db.Model):
@@ -49,6 +47,7 @@ class BibHOLDINGPEN(db.Model):
 class Bibdoc(db.Model):
 
     """Represent a Bibdoc record."""
+
     __tablename__ = 'bibdoc'
     id = db.Column(db.MediumInteger(9, unsigned=True), primary_key=True,
                    nullable=False, autoincrement=True)
@@ -68,6 +67,7 @@ class Bibdoc(db.Model):
 class BibdocBibdoc(db.Model):
 
     """Represent a BibdocBibdoc record."""
+
     __tablename__ = 'bibdoc_bibdoc'
     id = db.Column(db.MediumInteger(9, unsigned=True), primary_key=True,
                    nullable=False, autoincrement=True)
@@ -166,6 +166,22 @@ class BibEDITCACHE(db.Model):
     is_active = db.Column(db.TinyInteger(1, unsigned=True),
                           server_default='1', nullable=False)
 
+
+def bibdoc_before_drop(target, connection_dummy, **kw_dummy):
+    import os
+    import shutil
+    from invenio.legacy.bibdocfile.api import _make_base_dir
+    print
+    print(">>> Going to remove records data...")
+    for (docid,) in db.session.query(target.c.id).all():
+        directory = _make_base_dir(docid)
+        if os.path.isdir(directory):
+            print('    >>> Removing files for docid =', docid)
+            shutil.rmtree(directory)
+    db.session.commit()
+    print(">>> Data has been removed.")
+
+event.listen(Bibdoc.__table__, "before_drop", bibdoc_before_drop)
 
 __all__ = ('Bibrec',
            'BibEDITCACHE',

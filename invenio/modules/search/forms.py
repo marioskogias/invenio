@@ -1,25 +1,26 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2011, 2014, 2015 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2011, 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """WebMessage Forms."""
 
 from flask import url_for
+from six import iteritems
 
 from invenio.base.i18n import _
 from invenio.modules.knowledge.api import get_kb_mappings
@@ -79,7 +80,7 @@ class GetCollections(object):
 
     def __iter__(self):
         """Get all the collections."""
-        from invenio.modules.search.models import Collection
+        from invenio.modules.collections.models import Collection
         collections = Collection.query.all()
 
         for coll in collections:
@@ -93,12 +94,11 @@ class GetOutputFormats(object):
 
     def __iter__(self):
         """Get all the output formats."""
-        from invenio.modules.formatter.models import Format
+        from invenio.modules.formatter import registry
 
-        formats = Format.query.filter_by(visibility=True).all()
         yield ('', _('Default'))
-        for format_ in formats:
-            yield (format_.code, format_.name)
+        for code, format_ in iteritems(registry.output_formats):
+            yield (code, format_['name'])
 
 
 class WebSearchUserSettingsForm(InvenioBaseForm):

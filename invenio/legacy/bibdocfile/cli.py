@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2008, 2009, 2010, 2011, 2012, 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2008, 2009, 2010, 2011, 2012, 2014 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 from __future__ import print_function
 
@@ -433,10 +433,11 @@ def cli_get_stats(dummy):
             for row in table:
                 print("\t".join(str(elem) for elem in row))
 
-    for collection, reclist in run_sql("SELECT name, reclist FROM collection ORDER BY name"):
+    from invenio.modules.collections.cache import get_collection_reclist
+    for collection, in run_sql("SELECT name FROM collection ORDER BY name"):
         print("-" * 79)
         print("Statistic for: %s " % collection)
-        reclist = intbitset(reclist)
+        reclist = get_collection_reclist(collection)
         if reclist:
             sqlreclist = "(" + ','.join(str(elem) for elem in reclist) + ')'
             print_table("Formats", run_sql("SELECT COUNT(format) as c, format FROM bibrec_bibdoc AS bb JOIN bibdocfsinfo AS fs ON bb.id_bibdoc=fs.id_bibdoc WHERE id_bibrec in %s AND last_version=true GROUP BY format ORDER BY c DESC" % sqlreclist)) # kwalitee: disable=sql

@@ -1,21 +1,21 @@
-## -*- mode: html; coding: utf-8; -*-
+# -*- mode: html; coding: utf-8; -*-
 
-## This file is part of Invenio.
-## Copyright (C) 2007, 2008, 2010, 2011 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+# This file is part of Invenio.
+# Copyright (C) 2007, 2008, 2010, 2011 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 <!-- WebDoc-Page-Title: BibFormat API -->
 <!-- WebDoc-Page-Navtrail: <a class="navtrail" href="<CFG_SITE_URL>/help/hacking">Hacking Invenio</a> &gt; <a class="navtrail" href="bibformat-internals">BibFormat Internals</a> -->
@@ -182,30 +182,6 @@ The APIs of bibformat.py consists in these functions:
      of - the code of output format for which we want to get the content type
      """
 
-
- def record_get_xml(recID, format='xm', decompress=zlib.decompress):
-     """
-     Returns an XML string of the record given by recID.
-
-     The function builds the XML directly from the database,
-     without using the standard formatting process.
-
-     'format' allows to define the flavour of XML:
-        - 'xm' for standard XML
-        - 'marcxml' for MARC XML
-        - 'oai_dc' for OAI Dublin Core
-        - 'xd' for XML Dublin Core
-
-     If record does not exist, returns empty string.
-
-     The function takes the following parameters:
-
-          recID - the id of the record to retrieve
-
-         format - the XML flavor in which we want to get the record
-
-     decompress _ a function used to decompress the record from the database
-    """
 
 The API of the BibFormat Object ('bfo') given as a parameter to
 format function of format elements consist in the following

@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
-## Comments and reviews for records.
+# Comments and reviews for records.
 
-## This file is part of Invenio.
-## Copyright (C) 2011 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+# This file is part of Invenio.
+# Copyright (C) 2011 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """WebLinkback - Web Interface"""
 
@@ -41,11 +41,12 @@ from invenio.config import CFG_SITE_URL, \
                            CFG_SITE_RECORD, \
                            CFG_WEBLINKBACK_TRACKBACK_ENABLED
 from invenio.legacy.search_engine import guess_primary_collection_of_a_record, \
-                                  create_navtrail_links, \
-                                  get_colID
+                                  create_navtrail_links
 from invenio.legacy.webpage import pageheaderonly, pagefooteronly
 from invenio.legacy.websearch.adminlib import get_detailed_page_tabs
 from invenio.modules.access.engine import acc_authorize_action
+from invenio.modules.collections.models import Collection
+
 import invenio.legacy.template
 webstyle_templates = invenio.legacy.template.load('webstyle')
 websearch_templates = invenio.legacy.template.load('websearch')
@@ -112,8 +113,9 @@ class WebInterfaceRecordLinkbacksPages(WebInterfaceDirectory):
 
         mathjaxheader, jqueryheader = weblinkback_templates.tmpl_get_mathjaxheader_jqueryheader()
 
-        unordered_tabs = get_detailed_page_tabs(get_colID(guess_primary_collection_of_a_record(self.recid)),
-                                                self.recid,
+        col_id = Collection.query.filter_by(
+            name=guess_primary_collection_of_a_record(self.recid)).value('id')
+        unordered_tabs = get_detailed_page_tabs(col_id, self.recid,
                                                 ln=argd['ln'])
         ordered_tabs_id = [(tab_id, values['order']) for (tab_id, values) in iteritems(unordered_tabs)]
         ordered_tabs_id.sort(lambda x, y: cmp(x[1], y[1]))

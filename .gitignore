@@ -18,7 +18,7 @@
 .pydevproject
 .settings
 .version
-Invenio.egg-info
+*.egg-info
 Makefile
 Makefile.in
 TAGS
@@ -56,4 +56,4 @@ po/POTFILES
 po/POTFILES-py
 po/POTFILES-webdoc
 po/stamp-po
-/tags
+tags

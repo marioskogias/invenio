@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2014, 2015 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """Version information for Invenio.
 
@@ -30,7 +30,7 @@ This file is imported by ``invenio.__init__``, and parsed by ``setup.py``.
 # - revision can be set if you want to override the date coming from git.
 #
 # See the doctest below.
-version = (1, 9999, 5, 'dev')
+version = (2, 0, 0)
 
 
 def build_version(*args):
@@ -41,15 +41,15 @@ def build_version(*args):
     .. doctest::
 
         >>> print(build_version(1, 0, 0))
-        1.0
+        1.0.0
         >>> print(build_version(1, 1, 1))
         1.1.1
         >>> print(build_version(1, 2, 3, 4))
         1.2.3.4
         >>> print(build_version(2, 0, 0, 'dev', 1))
-        2.0.dev1
+        2.0.0.dev1
         >>> print(build_version(2, 0, 0, 'dev'))  # doctest: +ELLIPSIS
-        2.0.dev...
+        2.0.0.dev...
         >>> print(build_version(2, 0, 1, 'dev'))  # doctest: +ELLIPSIS
         2.0.1.dev...
         >>> print(build_version(1, 2, 3, 4, 5, 6, 'dev'))  # doctest: +ELLIPSIS
@@ -73,7 +73,7 @@ def build_version(*args):
         return (position, searching)
 
     last_zero = pos + 1 - reduce(zero_search, reversed(args[:pos]), (1, True))[0]
-    parts = max(2, last_zero)
+    parts = max(3, last_zero)
     version = '.'.join(str(arg) for arg in args[:parts])
 
     if len(args) > pos:

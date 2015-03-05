@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2009, 2010, 2011, 2012, 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2009, 2010, 2011, 2012, 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """
 Invenio DB dumper.
@@ -41,6 +41,12 @@ from invenio.legacy.bibsched.bibtask import task_init, \
                                             task_get_task_param, \
                                             task_low_level_submission
 from invenio.utils.shell import run_shell_command, escape_shell_arg
+from invenio.celery.utils import (
+    enable_queue,
+    get_queues,
+    suspend_queues,
+)
+
 
 def get_table_names(value):
     """
@@ -245,6 +251,8 @@ def _dbdump_elaborate_submit_param(key, value, dummyopts, dummyargs):
             task_set_option("ignore_tables", value)
         except re.error:
             raise StandardError, "ERROR: Passed string: '%s' is not a valid regular expression." % value
+    elif key in ('--disable-workers', ):
+        task_set_option('disable_workers', True)
     else:
         return False
     return True
@@ -261,6 +269,7 @@ def _dbdump_run_task_core():
     host = CFG_DATABASE_HOST
     port = CFG_DATABASE_PORT
     connection = None
+    active_queues = []
     try:
         if task_get_option('slave') and not task_get_option('dump_on_slave_helper_mode'):
             connection = get_connection_for_dump_on_slave()
@@ -316,6 +325,13 @@ def _dbdump_run_task_core():
             output_file_suffix = "%s.gz" % (output_file_suffix,)
         write_message("Reading parameters ended")
 
+        if task_get_option('disable_workers'):
+            active_queues = get_queues()
+            if active_queues:
+                write_message("Suspend workers and wait for any running tasks to complete")
+                suspend_queues(active_queues)
+                write_message("Workers suspended")
+
         # make dump:
         task_update_progress("Dumping database")
         write_message("Database dump started")
@@ -334,6 +350,8 @@ def _dbdump_run_task_core():
                         ignore_tables=ignore_tables)
         write_message("Database dump ended")
     finally:
+        for queue in active_queues:
+            enable_queue(queue)
         if connection and task_get_option('dump_on_slave_helper_mode'):
             write_message("Reattaching slave")
             attach_slave(connection)
@@ -358,13 +376,16 @@ def main():
   --compress            Compress dump directly into gzip.
   -S, --slave=HOST      Perform the dump from a slave, if no host use CFG_DATABASE_SLAVE.
   --ignore-tables=regex Ignore tables matching the given regular expression
+  --disable-workers     Disable any task queue workers while dumping.
 
 Examples:
     $ dbdump --ignore-tables '^(idx|rnk)'
     $ dbdump -n3 -o/tmp -s1d -L 02:00-04:00
 """ % CFG_LOGDIR,
               specific_params=("n:o:p:S:",
-                               ["number=", "output=", "params=", "slave=", "compress", 'ignore-tables=', "dump-on-slave-helper"]),
+                               ["number=", "output=", "params=", "slave=",
+                                "compress", 'ignore-tables=',
+                                "dump-on-slave-helper", "disable-workers"]),
               task_submit_elaborate_specific_parameter_fnc=_dbdump_elaborate_submit_param,
               task_run_fnc=_dbdump_run_task_core)
 

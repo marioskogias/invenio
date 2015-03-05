@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2014 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """Registries for search module."""
 
@@ -25,8 +25,7 @@ from werkzeug.utils import cached_property
 
 from invenio.ext.registry import DictModuleAutoDiscoverySubRegistry, \
     ModuleAutoDiscoverySubRegistry
-from invenio.modules.search.models import FacetCollection
-from invenio.modules.search.facet_builders import FacetBuilder
+from invenio.modules.collections.models import FacetCollection
 from invenio.utils.memoise import memoize
 
 searchext = RegistryProxy('searchext', ModuleAutoDiscoveryRegistry,
@@ -89,6 +88,7 @@ class FacetsRegistry(DictModuleAutoDiscoverySubRegistry):
         :param plugin_code: a module with facet definition - should have facet
             variable
         """
+        from invenio.modules.search.facet_builders import FacetBuilder
         if 'facet' in dir(plugin_code):
             candidate = getattr(plugin_code, 'facet')
             if isinstance(candidate, FacetBuilder):
@@ -138,3 +138,10 @@ class FacetsRegistry(DictModuleAutoDiscoverySubRegistry):
                 for facet in facets_set]
 
 facets = RegistryProxy('facets', FacetsRegistry, 'facets')
+
+units = RegistryProxy(
+    'searchext.units', DictModuleAutoDiscoverySubRegistry, 'units',
+    keygetter=lambda key, value, new_value: value.__name__.split('.')[-1],
+    valuegetter=lambda value: value.search_unit,
+    registry_namespace=searchext,
+)

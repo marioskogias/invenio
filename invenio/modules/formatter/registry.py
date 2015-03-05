@@ -1,29 +1,30 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2013, 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA
+#
+# This file is part of Invenio.
+# Copyright (C) 2013, 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA
 
 """Implement registries for formatter."""
 
 import os
+import yaml
 
-from invenio.ext.registry import ModuleAutoDiscoverySubRegistry
 from flask.ext.registry import PkgResourcesDirDiscoveryRegistry, \
     ModuleAutoDiscoveryRegistry, RegistryProxy
+from invenio.ext.registry import ModuleAutoDiscoverySubRegistry
 from invenio.utils.datastructures import LazyDict
 
 format_elements = RegistryProxy(
@@ -50,8 +51,8 @@ output_formats_directories = RegistryProxy(
     'output_formats'
 )
 
-output_formats = RegistryProxy(
-    'output_formats',
+output_formats_files = RegistryProxy(
+    'output_formats_files',
     PkgResourcesDirDiscoveryRegistry,
     '.', registry_namespace=output_formats_directories
 )
@@ -90,11 +91,24 @@ def create_output_formats_lookup():
     """Create output formats."""
     out = {}
 
-    for f in output_formats:
-        of = os.path.basename(f)
+    for f in output_formats_files:
+        of = os.path.basename(f).lower()
+        data = {}
+        if of.endswith('.yml'):
+            of = of[:-4]
+            with open(f, 'r') as f:
+                data.update(yaml.load(f) or {})
+                data['code'] = of
+        else:
+            continue  # unknown filetype
         if of in out:
             continue
-        out[of] = f
+        out[of] = data
     return out
 
-output_formats_lookup = LazyDict(create_output_formats_lookup)
+output_formats = LazyDict(create_output_formats_lookup)
+
+export_formats = LazyDict(lambda: dict(
+    (code, of) for code, of in output_formats.items()
+    if of.get('content_type', '') != 'text/html' and of.get('visibility', 0)
+))

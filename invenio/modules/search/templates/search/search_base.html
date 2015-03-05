@@ -1,20 +1,20 @@
 {#
-## This file is part of Invenio.
-## Copyright (C) 2012, 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+# This file is part of Invenio.
+# Copyright (C) 2012, 2014 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 #}
 
 {% extends "search/searchbar_frame.html" %}
@@ -116,7 +116,7 @@ require(['jquery', 'js/search/search'], function($, search) {
   search({
     elem: '#facet_list',
     data: {{ facets | tojson | safe }},
-    searchResultsUrl: '{{ url_for('search.results', qid=qid) }}',
+    searchResultsUrl: '{{ url_for('search.search') }}',
     args: {{ request.args.to_dict() | tojson | safe }},
     labels: {
       action: '{{ _('Default action is <em class="text-info">limit</em>, however you can also <abbr title="you can use shift+left click"><em class="text-danger">exclude</em></abbr> selected term from results.') | safe }}',

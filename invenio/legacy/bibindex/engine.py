@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009,
-##               2010, 2011, 2012, 2013, 2014, 2015 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009,
+#               2010, 2011, 2012, 2013, 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 from __future__ import print_function
 
@@ -51,10 +51,8 @@ from invenio.legacy.bibauthority.config import \
 from invenio.legacy.bibauthority.engine import get_index_strings_by_control_no,\
      get_control_nos_from_recID
 from invenio.legacy.search_engine import perform_request_search, \
-     get_index_stemming_language, \
      get_synonym_terms, \
-     search_pattern, \
-     search_unit_in_bibrec
+     search_pattern
 from invenio.legacy.dbquery import run_sql, DatabaseError, serialize_via_marshal, \
      deserialize_via_marshal, wash_table_column_name
 from invenio.legacy.bibindex.engine_washer import wash_index_term
@@ -79,7 +77,6 @@ from invenio.legacy.bibindex.engine_utils import load_tokenizers, \
     get_all_indexes, \
     get_index_virtual_indexes, \
     get_virtual_index_building_blocks, \
-    get_index_id_from_index_name, \
     run_sql_drop_silently, \
     get_min_last_updated, \
     remove_inexistent_indexes, \
@@ -92,11 +89,14 @@ from invenio.legacy.bibindex.engine_utils import load_tokenizers, \
     make_prefix, \
     list_union, \
     recognize_marc_tag
+from invenio.modules.indexer.cache import get_index_stemming_language
 from invenio.modules.records.api import get_record
 from invenio.utils.memoise import Memoise
 from invenio.legacy.bibindex.termcollectors import \
     TermCollector, \
     NonmarcTermCollector
+
+from .engine_utils import get_index_id_from_index_name
 
 
 if sys.hexversion < 0x2040000:
@@ -105,7 +105,7 @@ if sys.hexversion < 0x2040000:
     # pylint: enable=W0622
 
 
-## precompile some often-used regexp for speed reasons:
+# precompile some often-used regexp for speed reasons:
 re_subfields = re.compile('\$\$\w')
 re_datetime_shift = re.compile("([-\+]{0,1})([\d]+)([dhms])")
 re_prefix = re.compile('__[a-zA-Z1-9]*__')
@@ -127,7 +127,7 @@ def list_unique(_list):
     return _dict.keys()
 
 
-## safety function for killing slow DB threads:
+# safety function for killing slow DB threads:
 def kill_sleepy_mysql_threads(max_threads=CFG_MAX_MYSQL_THREADS,
                               thread_timeout=CFG_MYSQL_THREAD_TIMEOUT):
     """Check the number of DB threads and if there are more than
@@ -552,11 +552,11 @@ def find_affected_records_for_index(indexes=None, recIDs=None, force_all_indexes
         # secondly, there may be newly inserted records which were
         # uploaded with old timestamp (via 005), so let us detect
         # those too, using their "real" modification_date:
-        res = run_sql("""SELECT id,modification_date,''
+        res = run_sql("""SELECT bibrec.id,modification_date,''
                          FROM bibrec, hstRECORD
                          WHERE modification_date>%s
-                           AND id=id_bibrec
-                           AND (SELECT COUNT(*) FROM hstRECORD WHERE id_bibrec=id)=1""", (min_last_updated,))
+                           AND bibrec.id=id_bibrec
+                           AND (SELECT COUNT(*) FROM hstRECORD WHERE id_bibrec=bibrec.id)=1""", (min_last_updated,))
         if res:
             recIDs_info.extend(res)
 
@@ -1435,7 +1435,7 @@ class WordTable(AbstractIndexTable):
                                           wlist[recID])
 
         marc, nonmarc = self.find_nonmarc_records(recID1, recID2)
-        if marc:
+        if marc and len(self.tags):
             collector = TermCollector(self.tokenizer,
                                       self.tokenizer_type,
                                       self.table_type,
@@ -1443,14 +1443,15 @@ class WordTable(AbstractIndexTable):
                                       [recID1, recID2])
             collector.set_special_tags(self.special_tags)
             wlist = collector.collect(marc, wlist)
-        if nonmarc:
+        if nonmarc or (not len(self.tags) and len(self.nonmarc_tags)):
             collector = NonmarcTermCollector(self.tokenizer,
                                              self.tokenizer_type,
                                              self.table_type,
                                              self.nonmarc_tags,
                                              [recID1, recID2])
             collector.set_special_tags(self.special_tags)
-            wlist = collector.collect(nonmarc, wlist)
+            toindex = nonmarc if len(self.tags) else marc
+            wlist = collector.collect(toindex, wlist)
 
         # lookup index-time synonyms:
         synonym_kbrs = get_all_synonym_knowledge_bases()
@@ -1925,6 +1926,22 @@ def get_recIDs_by_date_bibliographic(dates, index_name, force_all=False):
                                         (dates[0], dates[1],)))
 
     return set(res)
+
+
+def search_unit_in_bibrec(datetext1, datetext2, search_type='c'):
+    """Return hitset of recIDs found that were either created or modified.
+
+    Search according to 'search_type' argument being 'c' or 'm' from datetext1
+    until datetext2, inclusive. Does not pay attention to pattern, collection,
+    anything. Useful to intersect later on with the 'real' query.
+    """
+    from invenio.ext.sqlalchemy import db
+    from invenio.modules.records.models import Record
+    if datetext1 != datetext2:
+        datetext1 += '->' + datetext2
+
+    return intbitset(db.session.query(Record.id).filter(
+        *Record.filter_time_interval(datetext1, search_type)).all())
 
 
 def get_recIDs_by_date_authority(dates, index_name, force_all=False):

@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2012, 2013, 2014, 2015 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2012, 2013, 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """Provide support for legacy UserInfo object."""
 
@@ -135,21 +135,8 @@ class UserInfo(CombinedMultiDict, UserMixin):
 
     def _create_guest(self):
         data = {'settings': {}}
-
-        if current_app.config.get(
-                'CFG_WEBSESSION_DIFFERENTIATE_BETWEEN_GUESTS', False):
-            from invenio.ext.sqlalchemy import db
-            from invenio.modules.accounts.models import User
-            note = '1' if current_app.config.get(
-                'CFG_ACCESS_CONTROL_LEVEL_GUESTS', 0) == 0 else '0'
-            u = User(email='', note=note, password='guest')
-            db.session.add(u)
-            db.session.commit()
-            data.update(u.__dict__)
-        else:
-            # Minimal information about user.
-            data['id'] = data['uid'] = 0
-
+        # Minimal information about user.
+        data['id'] = data['uid'] = 0
         return data
 
     def _login(self, uid, force=False):
@@ -205,7 +192,7 @@ class UserInfo(CombinedMultiDict, UserMixin):
         from invenio.modules.access.engine import acc_authorize_action
         from invenio.modules.access.control import acc_get_role_id, \
             acc_is_user_in_role
-        from invenio.legacy.search_engine import \
+        from invenio.modules.search.utils import \
             get_permitted_restricted_collections
 
         data = {}

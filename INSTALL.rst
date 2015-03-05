@@ -32,6 +32,7 @@ following this tutorial. **Note:** the recommended Python version is 2.7.5+
     $ sudo apt-get install build-essential git redis-server \
                            libmysqlclient-dev libxml2-dev libxslt-dev \
                            libjpeg-dev libfreetype6-dev libtiff-dev \
+                           libffi-dev libssl-dev \
                            software-properties-common python-dev \
                            virtualenvwrapper subversion
     $ sudo pip install -U virtualenvwrapper pip
@@ -457,12 +458,9 @@ they are not in the environment ``$PATH`` already.
 
 .. code-block:: console
 
-    # Global installation
-    $ sudo su -c "npm install -g less clean-css requirejs uglify-js"
-
-    # or
-    # Local installation
-    (invenio)$ npm install less clean-css requirejs uglify-js
+    # Local installation (using package.json)
+    (invenio)$ cdvirtualenv src/invenio
+    (invenio)$ npm install
     (invenio)$ inveniomanage config set LESS_BIN `find $PWD/node_modules -iname lessc | head -1`
     (invenio)$ inveniomanage config set CLEANCSS_BIN `find $PWD/node_modules -iname cleancss | head -1`
     (invenio)$ inveniomanage config set REQUIREJS_BIN `find $PWD/node_modules -iname r.js | head -1`
@@ -512,7 +510,7 @@ which must be running alongside with the web server.
     $ sudo service redis-server status
     redis-server is running
     # or start it with start
-    $ sudo service redis-start start
+    $ sudo service redis-server start
 
     # launch celery
     $ workon invenio

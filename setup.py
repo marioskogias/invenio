@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2013, 2014, 2015 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2013, 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """Invenio is Fun.
 
@@ -88,6 +88,7 @@ install_requires = [
     "fs>=0.4",
     "intbitset>=2.0",
     "invenio-client>=0.1.0",
+    "invenio-query-parser>=0.2",
     "jellyfish>=0.3.2",
     "Jinja2>=2.7",
     "libmagic>=1.0",
@@ -122,7 +123,8 @@ install_requires = [
     "unidecode",
     "workflow>=1.2.0",
     "WTForms>=2.0.1",
-    "wtforms-alchemy>=0.12.6"
+    "wtforms-alchemy>=0.12.6",
+    "pyyaml",
 ]
 
 
@@ -132,9 +134,19 @@ extras_require = {
     ],
     "development": [
         "Flask-DebugToolbar==0.9.0",
+        "watchdog==0.8.3",
+    ],
+    "dropbox": [
+        "dropbox>=2.1.0"
     ],
     "elasticsearch": [
         "pyelasticsearch>=0.6.1"
+    ],
+    "googledrive": [
+        "google-api-python-client>=1.2",
+        "apiclient",
+        "oauth2client",
+        "urllib3>=1.8.3"
     ],
     "img": [
         "qrcode",
@@ -144,18 +156,13 @@ extras_require = {
         "pymongo"
     ],
     "misc": [  # was requirements-extras
-        "apiclient",  # extra=cloud?
-        "dropbox",  # extra=cloud?
         "gnuplot-py==1.8",
         "flake8",  # extra=kwalitee?
-        "pep8",  # extra=kwalitee?
         "pychecker==0.8.19",  # extra=kwalitee?
         "pylint",  # extra=kwalitee?
         "nosexcover",  # test?
-        "oauth2client",  # extra=cloud?
         "python-onedrive",  # extra=cloud?
         "python-openid",  # extra=sso?
-        "urllib3",  # extra=cloud?
     ],
     "mixer": [
         "mixer",
@@ -177,6 +184,9 @@ extras_require = {
         # Any other versions are not supported.
         "pyRXP==1.16-daily-unix"
     ],
+    "rabbitmq": [
+        "amqp>=1.4.5",
+    ],
     "github": [
         "github3.py>=0.9"
     ],
@@ -187,6 +197,8 @@ extras_require["docs"] += extras_require["img"]
 extras_require["docs"] += extras_require["mongo"]
 extras_require["docs"] += extras_require["sso"]
 extras_require["docs"] += extras_require["github"]
+# FIXME extras_require["docs"] += extras_require["dropbox"]
+# FIXME extras_require["docs"] += extras_require["googledrive"]
 
 tests_require = [
     # FIXME remove limit after 0.8.4 is out and urllib3's requirements
@@ -218,13 +230,13 @@ packages = find_packages(exclude=['docs'])
 packages.append('invenio_docs')
 
 setup(
-    name='Invenio',
+    name='invenio',
     version=version,
     url='https://github.com/inveniosoftware/invenio',
     license='GPLv2',
     author='CERN',
     author_email='info@invenio-software.org',
-    description='Digital library software',
+    description='Invenio digital library framework',
     long_description=__doc__,
     packages=packages,
     package_dir={'invenio_docs': 'docs'},
@@ -238,8 +250,10 @@ setup(
             # Legacy
             'alertengine = invenio.legacy.webalert.scripts.alertengine:main',
             'batchuploader = invenio.legacy.bibupload.scripts.batchuploader',
+            'bibcheck = invenio.legacy.bibcheck.scripts.bibcheck:main',
             'bibcircd = invenio.legacy.bibcirculation.scripts.bibcircd:main',
             'bibauthorid = invenio.legacy.bibauthorid.scripts.bibauthorid:main',
+            'bibcatalog = invenio.legacy.bibcatalog.scripts.bibcatalog:main',
             'bibclassify = invenio.modules.classifier.scripts.classifier:main',
             'bibconvert = invenio.legacy.bibconvert.scripts.bibconvert:main',
             'bibdocfile = invenio.legacy.bibdocfile.scripts.bibdocfile:main',
@@ -256,12 +270,15 @@ setup(
             'bibstat = invenio.legacy.bibindex.scripts.bibstat:main',
             'bibtaskex = invenio.legacy.bibsched.scripts.bibtaskex:main',
             'bibtasklet = invenio.legacy.bibsched.scripts.bibtasklet:main',
+            'bibtex = invenio.modules.sequencegenerator.scripts.bibtex:main',
             'bibupload = invenio.legacy.bibupload.scripts.bibupload:main',
+            'convert_journals = invenio.legacy.docextract.scripts.convert_journals:main',
             'dbexec = invenio.legacy.miscutil.scripts.dbexec:main',
             'dbdump = invenio.legacy.miscutil.scripts.dbdump:main',
             'docextract = invenio.legacy.docextract.scripts.docextract:main',
             'elmsubmit = invenio.legacy.elmsubmit.scripts.elmsubmit:main',
             'gotoadmin = invenio.modules.redirector.scripts.redirector:main',
+            'hepdataharvest = invenio.utils.hepdata.scripts.hepdataharvest:main',
             'inveniocfg = invenio.legacy.inveniocfg:main',
             'inveniogc = invenio.legacy.websession.scripts.inveniogc:main',
             'inveniounoconv = invenio.legacy.websubmit.scripts.inveniounoconv:main',
@@ -272,7 +289,6 @@ setup(
             'textmarc2xmlmarc = invenio.legacy.bibrecord.scripts.textmarc2xmlmarc:main',
             'webaccessadmin = invenio.modules.access.scripts.webaccessadmin:main',
             'webauthorprofile = invenio.legacy.webauthorprofile.scripts.webauthorprofile:main',
-            'webcoll = invenio.legacy.websearch.scripts.webcoll:main',
             'webmessageadmin = invenio.legacy.webmessage.scripts.webmessageadmin:main',
             'webstatadmin = invenio.legacy.webstat.scripts.webstatadmin:main',
             'websubmitadmin = invenio.legacy.websubmit.scripts.websubmitadmin:main',
@@ -289,7 +305,8 @@ setup(
         'Development Status :: 4 - Beta',
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: GPLv2 License',
+        'License :: OSI Approved :: GNU General Public License v2'
+        ' or later (GPLv2+)',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',

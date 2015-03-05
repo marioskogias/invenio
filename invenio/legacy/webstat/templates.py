@@ -1,19 +1,19 @@
-## This file is part of Invenio.
-## Copyright (C) 2007, 2008, 2010, 2011, 2013, 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+# This file is part of Invenio.
+# Copyright (C) 2007, 2008, 2010, 2011, 2013, 2014 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 __revision__ = "$Id$"
 __lastupdated__ = "$Date$"
@@ -25,7 +25,6 @@ from invenio.config import \
      CFG_SITE_URL, \
      CFG_SITE_LANG, \
      CFG_SITE_NAME
-from invenio.legacy.search_engine import get_coll_sons
 from invenio.legacy.webstat.engine import get_invenio_error_details
 
 class Template:
@@ -313,7 +312,10 @@ class Template:
         """
         out = """<h3>Collections stats</h3>
                  <ul>"""
-        for coll in get_coll_sons(CFG_SITE_NAME):
+        from invenio.modules.collections.models import Collection
+        for collection in Collection.query.filter_by(
+                name=CFG_SITE_NAME).one().collection_children_r:
+            coll = collection.name
             out += """<li><a href="%s/stats/collections?%s">%s</a></li>""" \
                         % (CFG_SITE_URL, urllib.urlencode({'collection': coll}) +
                            ((CFG_SITE_LANG != ln and '&ln=' + ln) or ''), coll)

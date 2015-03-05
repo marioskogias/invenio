@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2013, 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2013, 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 
 """Community models.
@@ -45,42 +45,38 @@ After call to save_collection() you must do the following:
 """
 
 from datetime import datetime
+
 from flask import url_for
 
-from sqlalchemy import or_
-from sqlalchemy.orm import joinedload_all
 from invenio.base.globals import cfg
 from invenio.config import CFG_SITE_LANG
 from invenio.ext.sqlalchemy import db
 from invenio.ext.template import render_template_to_string
 from invenio.legacy.bibrecord import record_add_field
 from invenio.modules.access.models import \
-    AccACTION, \
-    AccROLE, \
-    AccARGUMENT, \
-    AccAuthorization, \
-    UserAccROLE
+    AccACTION, AccARGUMENT, \
+    AccAuthorization, AccROLE, UserAccROLE
 from invenio.modules.accounts.models import User
 from invenio.modules.communities.signals import before_save_collection, \
     after_save_collection, before_save_collections, after_save_collections, \
     before_delete_collection, after_delete_collection, \
     before_delete_collections, after_delete_collections, \
     pre_curation, post_curation
-from invenio.modules.search.models import \
+from invenio.modules.collections.models import \
     Collection, \
-    Collectionname, \
-    Collectiondetailedrecordpagetabs, \
     CollectionCollection, \
-    Portalbox, \
+    CollectionFormat, \
     CollectionPortalbox, \
-    Format, \
-    CollectionFormat
+    Collectiondetailedrecordpagetabs, \
+    Collectionname, \
+    Portalbox
+from invenio.modules.records.api import get_record
 from invenio.modules.oaiharvester.models import OaiREPOSITORY
 
 
 class Community(db.Model):
 
-    """Represents a Community.
+    """Represent a Community.
 
     A layer around Invenio's collections and portalboxes.
     """
@@ -211,8 +207,7 @@ class Community(db.Model):
     @classmethod
     def from_recid(cls, recid, provisional=False):
         """Get user communities specified in recid."""
-        from invenio.legacy.search_engine import get_record
-        rec = get_record(recid)
+        rec = get_record(recid).legacy_create_recstruct()
         prefix = "%s-" % (
             cfg['COMMUNITIES_ID_PREFIX_PROVISIONAL']
             if provisional else cfg['COMMUNITIES_ID_PREFIX'])
@@ -225,7 +220,7 @@ class Community(db.Model):
                 code, val = c[0][0]
                 if code == 'a' and val.startswith(prefix):
                     val = val[len(prefix):]
-                    u = Community.query.filter_by(id=val).first()
+                    u = cls.query.filter_by(id=val).first()
                     if u:
                         usercomm.append(u)
             except IndexError:
@@ -236,7 +231,7 @@ class Community(db.Model):
     def filter_communities(cls, p, so):
         """Search for communities.
 
-        Hellper function which takes from database only those communities which
+        Helper function which takes from database only those communities which
         match search criteria. Uses parameter 'so' to set communities in the
         correct order.
 
@@ -244,17 +239,18 @@ class Community(db.Model):
         slice of them for the current page. If page == 0 function will return
         all communities that match the pattern.
         """
-        query = Community.query
+        query = cls.query
         if p:
-            query = query.filter(or_(
-                Community.title.like("%" + p + "%"),
-                Community.description.like("%" + p + "%"),
+            query = query.filter(db.or_(
+                cls.id.like("%" + p + "%"),
+                cls.title.like("%" + p + "%"),
+                cls.description.like("%" + p + "%"),
             ))
         if so in cfg['COMMUNITIES_SORTING_OPTIONS']:
             order = so == 'title' and db.asc or db.desc
-            query = query.order_by(order(getattr(Community, so)))
+            query = query.order_by(order(getattr(cls, so)))
         else:
-            query = query.order_by(db.desc(Community.ranking))
+            query = query.order_by(db.desc(cls.ranking))
         return query
 
     #
@@ -307,8 +303,7 @@ class Community(db.Model):
         @param replace_func: Function to replace the collection id.
         @param include_func: Function to test if collection should be included
         """
-        from invenio.legacy.search_engine import get_record
-        rec = get_record(recid)
+        rec = get_record(recid).legacy_create_recstruct()
         newcolls = []
         dirty = False
 
@@ -502,19 +497,17 @@ class Community(db.Model):
 
     def save_collectionformat(self, collection, fmt_str):
         """Create or update CollectionFormat object."""
-        fmt = Format.query.filter_by(code=fmt_str).first()
-
         if collection.id:
             c_fmt = CollectionFormat.query.filter_by(
                 id_collection=collection.id
             ).first()
             if c_fmt:
-                update_changed_fields(c_fmt, dict(id_format=fmt.id, score=1))
+                update_changed_fields(c_fmt, dict(format=fmt_str, score=1))
                 return c_fmt
 
         c_fmt = CollectionFormat(
             collection=collection,
-            id_format=fmt.id,
+            format_code=fmt_str,
         )
         db.session.add(c_fmt)
         return c_fmt
@@ -839,7 +832,7 @@ class FeaturedCommunity(db.Model):
         """Get the latest featured community."""
         start_date = start_date or datetime.now()
 
-        return cls.query.options(joinedload_all(
+        return cls.query.options(db.joinedload_all(
             'community.collection')).filter(
             cls.start_date <= start_date).order_by(
             cls.start_date.desc()).first()

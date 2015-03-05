@@ -1,52 +1,65 @@
 # -*- coding: utf-8 -*-
-## This file is part of Invenio.
-## Copyright (C) 2012, 2013, 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2012, 2013, 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """The workflow engine extension of GenericWorkflowEngine."""
 
 from __future__ import absolute_import
 
-import traceback
-import sys
 import base64
+import sys
+import traceback
 
 from uuid import uuid1 as new_uuid
-from six import iteritems, reraise
-from six.moves import cPickle
-from workflow.engine import (GenericWorkflowEngine, ContinueNextToken,
-                             HaltProcessing, StopProcessing, JumpTokenBack,
-                             JumpTokenForward, WorkflowError)
 
 from invenio.ext.sqlalchemy import db
 
-from .errors import (
-    WorkflowError as WorkflowErrorClient,
-    WorkflowDefinitionError,
-    AbortProcessing,
-    SkipToken
+from six import iteritems, reraise
+from six.moves import cPickle
+
+from workflow.engine import (
+    ContinueNextToken,
+    GenericWorkflowEngine,
+    HaltProcessing,
+    JumpTokenBack,
+    JumpTokenForward,
+    StopProcessing,
+    WorkflowError
 )
-from .models import (Workflow, BibWorkflowObject, BibWorkflowEngineLog,
-                     ObjectVersion)
-from .utils import dictproperty
-from .logger import get_logger, BibWorkflowLogHandler
-from .errors import WorkflowHalt
+
+from .errors import (
+    AbortProcessing,
+    SkipToken,
+    WorkflowDefinitionError,
+    WorkflowError as WorkflowErrorClient,
+    WorkflowHalt,
+)
+from .logger import BibWorkflowLogHandler, get_logger
+from .models import (
+    BibWorkflowEngineLog,
+    BibWorkflowObject,
+    ObjectVersion,
+    Workflow,
+)
 from .signals import (workflow_finished,
                       workflow_halted,
                       workflow_started)
+from .utils import dictproperty
 
 
 class WorkflowStatus(object):
@@ -193,6 +206,7 @@ class BibWorkflowEngine(GenericWorkflowEngine):
         return self.db_obj.objects
 
     def objects_of_statuses(self, statuses):
+        """Get objects having given statuses."""
         results = []
         for obj in self.db_obj.objects:
             if obj.version in statuses:
@@ -409,6 +423,7 @@ BibWorkflowEngine
         while len(objects) - 1 > i[0] >= -1:
             i[0] += 1
             obj = objects[i[0]]
+            obj.reset_error_message()
             obj.save(version=ObjectVersion.RUNNING,
                      id_workflow=self.db_obj.uuid)
             callbacks = self.callback_chooser(obj, self)
@@ -471,27 +486,25 @@ BibWorkflowEngine
                     continue
                 except (HaltProcessing, WorkflowHalt) as e:
                     self.increase_counter_halted()
+
+                    # We keep the extra_data from the object this run
                     extra_data = obj.get_extra_data()
                     obj.set_extra_data(extra_data)
+
                     workflow_halted.send(obj)
-
-                    msg = 'Processing was halted at step: %s' % (i,)
-                    self.log.info(msg)
-                    obj.log.info(msg)
-
-                    # Re-raise the exception,
-                    # this is the only case when a WFE can be completely
-                    # stopped
                     if type(e) == WorkflowHalt:
                         reraise(*sys.exc_info())
                     else:
                         raise WorkflowHalt(e)
                 except (WorkflowErrorClient, WorkflowError, Exception) as e:
-                    # unless instructed otherwise.
-                    msg = "Error: %r\n%s" % (e, traceback.format_exc())
+                    self.increase_counter_error()
+
+                    # We keep the extra_data from the object this run
                     extra_data = obj.get_extra_data()
                     obj.set_extra_data(extra_data)
-                    self.increase_counter_error()
+
+                    msg = "Error: %r\n%s" % (e, traceback.format_exc())
+
                     if isinstance(e, WorkflowErrorClient):
                         reraise(*sys.exc_info())
                     else:
@@ -500,6 +513,7 @@ BibWorkflowEngine
                             id_workflow=self.uuid,
                             id_object=self.getCurrObjId(),
                         )
+
             # We save each object once it is fully run through
             obj.save(version=ObjectVersion.COMPLETED)
             self.increase_counter_finished()

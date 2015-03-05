@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
 
-## This file is part of Invenio.
-## Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+# This file is part of Invenio.
+# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 # pylint: disable=C0301
 
@@ -89,9 +89,6 @@ from invenio.legacy.websearch_external_collections import external_collection_ge
 from invenio.legacy.websearch_external_collections.utils import get_collection_id
 from invenio.legacy.websearch_external_collections.config import CFG_EXTERNAL_COLLECTION_MAXRESULTS
 from invenio.legacy.bibrecord import get_fieldvalues
-from invenio.modules.formatter import format_record
-
-from invenio.utils.hepdata import display as hepdatadisplayutils
 
 _RE_PUNCTUATION = re.compile(CFG_BIBINDEX_CHARS_PUNCTUATION)
 _RE_SPACES = re.compile(r"\s+")
@@ -556,31 +553,6 @@ class Template:
         description += '; '.join(get_fieldvalues(recid, "100__a") + get_fieldvalues(recid, "700__a"))
 
         return (title, description, keywords)
-
-
-    def tmpl_exact_author_browse_help_link(self, p, p1, p2, p3, f, f1, f2, f3, rm, cc, ln, jrec, rg, aas, action, link_name):
-        """
-        Creates the 'exact author' help link for browsing.
-
-        """
-        _ = gettext_set_language(ln)
-        url = create_html_link(self.build_search_url(p=p,
-                                                     p1=p1,
-                                                     p2=p2,
-                                                     p3=p3,
-                                                     f=f,
-                                                     f1=f1,
-                                                     f2=f2,
-                                                     f3=f3,
-                                                     rm=rm,
-                                                     cc=cc,
-                                                     ln=ln,
-                                                     jrec=jrec,
-                                                     rg=rg,
-                                                     aas=aas,
-                                                     action=action),
-                               {}, _(link_name), {'class': 'nearestterms'})
-        return "Did you mean to browse in %s index?" % url
 
 
     def tmpl_navtrail_links(self, aas, ln, dads):
@@ -3988,7 +3960,7 @@ class Template:
     def tmpl_record_hepdata(self, data, recid, isLong=True):
         """ Generate a page for HepData records
         """
-        from invenio.utils import hepdata as hepdatautils
+        from invenio.utils.hepdata import api as hepdatautils
         from invenio.legacy.search_engine import get_fieldvalues
 
         c = []
@@ -4000,7 +3972,7 @@ class Template:
             try:
                 publisher = get_fieldvalues(dataset.recid, '520__9')[0]
             except IndexError:
-                from invenio.utils.hepdata import create_hepdata_ticket
+                from invenio.utils.hepdata.api import create_hepdata_ticket
                 create_hepdata_ticket(dataset.recid, 'Data missing in 520__9')
                 continue
             if publisher == "HEPDATA" and flag_hepdata == 0:
@@ -4043,7 +4015,7 @@ class Template:
             try:
                 publisher = get_fieldvalues(dataset.recid, '520__9')[0]
             except IndexError:
-                from invenio.utils.hepdata import create_hepdata_ticket
+                from invenio.utils.hepdata.api import create_hepdata_ticket
                 create_hepdata_ticket(dataset.recid, 'Data missing in 520__9')
                 continue
             if publisher == "HEPDATA":

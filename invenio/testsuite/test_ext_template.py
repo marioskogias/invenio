@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2013, 2014 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2013, 2014 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """
 Unit test for the template extensions.
@@ -78,13 +78,13 @@ class TemplateArgsTest(InvenioTestCase):
     def setup_app(cls, app):
         """Custom setup function."""
         from invenio.ext.template.context_processor import template_args
-        from invenio.modules.search.views.search import index
+        from invenio.modules.collections.views.collections import index
 
         @template_args(index)
         def foo():
             return {'foo': 'foo', 'baz': 'baz'}
 
-        @template_args('search.index', app=app)
+        @template_args('collections.index', app=app)
         def bar():
             return {'bar': 'bar', 'baz': 'BAZ'}
 
@@ -97,7 +97,7 @@ class TemplateArgsTest(InvenioTestCase):
         return cfg
 
     def test_template_args_loading(self):
-        self.client.get(url_for('search.index'))
+        self.client.get(url_for('collections.index'))
         self.assertEqual(self.get_context_variable('foo'), 'foo')
         self.assertEqual(self.get_context_variable('bar'), 'bar')
         self.assertEqual(self.get_context_variable('baz'), 'BAZ')
@@ -114,7 +114,7 @@ class TemplateArgsLoadingTest(unittest.TestCase):
             return {'foo': 'foo'}
 
         self.assertRaises(Exception,
-                          lambda: template_args('search.index')(foo))
+                          lambda: template_args('collections.index')(foo))
 
 
 TEST_SUITE = make_test_suite(TemplateTest, TemplateLoaderCase,

@@ -1,21 +1,21 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """
 BibRecord - XML MARC processing library for Invenio.
@@ -91,7 +91,7 @@ bibrecord_tests.py and bibupload_regression_tests.py.
 import re
 import string
 import sys
-from six import StringIO
+from six import StringIO, string_types
 
 if sys.hexversion < 0x2040000:
     # pylint: disable=W0622
@@ -1593,8 +1593,8 @@ def _check_field_validity(field):
 
     for subfield in field[0]:
         if (type(subfield) not in (list, tuple) or
-                len(subfield) != 2 or type(subfield[0]) is not str or
-                type(subfield[1]) is not str):
+                len(subfield) != 2 or not isinstance(subfield[0], string_types) or
+                not isinstance(subfield[0], string_types)):
             raise InvenioBibRecordFieldError(
                 "Subfields are malformed. "
                 "Should a list of tuples of 2 strings.")

@@ -1,27 +1,27 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2014, 2015 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 """Flask-Admin page to configure facets sets per collection."""
 
 from invenio.ext.admin.views import ModelView
 from invenio.ext.sqlalchemy import db
-from invenio.modules.search.models import Collection, FacetCollection
+from invenio.modules.collections.models import Collection, FacetCollection
 from invenio.modules.search.registry import facets
 
 from wtforms.fields import IntegerField, SelectField
@@ -104,6 +104,8 @@ class FacetsAdmin(ModelView):
                 is_duplicated,
                 DataRequired(),
             ],
+            'query_factory': lambda: [(facet_name, facet_name)
+                                      for facet_name in facets.keys()],
         },
     }
 
@@ -119,11 +121,6 @@ class FacetsAdmin(ModelView):
 
         :param app: flask application
         """
-        # these lines must be in the application context
-        with app.app_context():
-            # because of the access to FacetsRegistry
-            self.form_args['facet_name']['choices'] = \
-                [(facet_name, facet_name) for facet_name in facets.keys()]
         super(FacetsAdmin, self).__init__(*args, **kwargs)
 
 

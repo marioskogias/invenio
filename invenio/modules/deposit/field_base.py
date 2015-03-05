@@ -1,24 +1,23 @@
 # -*- coding: utf-8 -*-
-##
-## This file is part of Invenio.
-## Copyright (C) 2013, 2014, 2015 CERN.
-##
-## Invenio is free software; you can redistribute it and/or
-## modify it under the terms of the GNU General Public License as
-## published by the Free Software Foundation; either version 2 of the
-## License, or (at your option) any later version.
-##
-## Invenio is distributed in the hope that it will be useful, but
-## WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-## General Public License for more details.
-##
-## You should have received a copy of the GNU General Public License
-## along with Invenio; if not, write to the Free Software Foundation, Inc.,
-## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+#
+# This file is part of Invenio.
+# Copyright (C) 2013, 2014, 2015 CERN.
+#
+# Invenio is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of the
+# License, or (at your option) any later version.
+#
+# Invenio is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Invenio; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
-"""
-Implementation of validators, post-processors and auto-complete functions.
+"""Implementation of validators, post-processors and auto-complete functions.
 
 Validators
 ----------
@@ -99,6 +98,7 @@ Auto-complete
 import warnings
 
 from wtforms import Field
+
 from .form import CFG_FIELD_FLAGS
 
 __all__ = ('WebDepositField', )
@@ -169,6 +169,13 @@ class WebDepositField(Field):
             if value:
                 setattr(self.flags, flag, True)
 
+        if callable(self.autocomplete):
+            warnings.warn("Autocomplete functions use now "
+                          "'autocomplete_fn' attribute",
+                          DeprecationWarning)
+            self.autocomplete_fn = self.autocomplete
+            self.autocomplete = None
+
     def __call__(self, *args, **kwargs):
         """Set custom keyword arguments when rendering field."""
         if 'placeholder' not in kwargs and self.placeholder:
@@ -180,13 +187,7 @@ class WebDepositField(Field):
         elif self.widget_classes:
             kwargs['class_'] = self.widget_classes
         if self.autocomplete:
-            if callable(self.autocomplete):
-                warnings.warn("Autocomplete functions use now "
-                              "'autocomplete_fn' attribute",
-                              DeprecationWarning)
-            else:
-                # set default for basic typeahead
-                kwargs['data-autocomplete'] = self.autocomplete
+            kwargs['data-autocomplete'] = self.autocomplete
             kwargs['data-autocomplete-limit'] = self.autocomplete_limit
         elif self.autocomplete_fn:
             kwargs['data-autocomplete'] = "default"
