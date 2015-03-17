@@ -159,16 +159,13 @@ class ElasticSearchIndex(Index):
 
     """Describe a Elastic Search index."""
 
-    def __init__(self, elasticsearch=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         r"""Initialize class.
 
         :param elasticsearch: special configuration applied to \
             elasticsearch index
         """
         super(ElasticSearchIndex, self).__init__(*args, **kwargs)
-        if elasticsearch:
-            self.analyzer = elasticsearch['analyzer'] \
-                if 'analyzer' in elasticsearch else None
 
 
 class VirtualIndex(object):
@@ -199,12 +196,11 @@ class VirtualIndex(object):
     @indices.setter
     def indices(self, value):
         """Set indices."""
-        value = {value.name: value} if isinstance(value, Index) else value
-        if not all(isinstance(index, Index) for index in value.itervalues()):
+        if not all(isinstance(index, Index) for index in value):
             raise IndexerBadConfigurationException(_(
                 "Virtual Index can contain only Indices"
             ))
-        self._indices = value or {}
+        self._indices = value or []
 
 
 class IndexerConfiguration(object):
@@ -223,7 +219,7 @@ class IndexerConfiguration(object):
     @property
     def virtual_indices(self):
         """Get virtual indices."""
-        return self.virtual_indices or []
+        return self._virtual_indices or []
 
     @virtual_indices.setter
     def virtual_indices(self, virtual_indices):
@@ -232,7 +228,7 @@ class IndexerConfiguration(object):
             if isinstance(virtual_indices, VirtualIndex) \
             else virtual_indices
 
-        self.virtual_indices = virtual_indices or []
+        self._virtual_indices = virtual_indices or []
 
     @property
     def virtual_index_dict(self):
