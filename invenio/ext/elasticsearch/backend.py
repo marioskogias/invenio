@@ -33,7 +33,7 @@ class ElasticSearchWrapper(object):
         Only one Registry per application is allowed.
         """
         app.config.setdefault('ELASTICSEARCH_URL',
-                              'http://188.184.141.134:9200/')
+                              'http://invenio-elasticsearch:9200')
         app.config.setdefault('ELASTICSEARCH_INDEX', "invenio")
         app.config.setdefault('ELASTICSEARCH_NUMBER_OF_SHARDS', 1)
         app.config.setdefault('ELASTICSEARCH_NUMBER_OF_REPLICAS', 0)
@@ -111,11 +111,14 @@ class ElasticSearchWrapper(object):
         except:
             return False
 
-    def create_index(self, index=None):
+    def create_index(self, index=None, configuration=None):
         if index is None:
             index = self.app.config['ELASTICSEARCH_INDEX']
         if self.index_exists(index=index):
             return True
+        if not configuration:
+            from invenio.ext.elasticsearch.config import es_config
+            configuration = es_config.get_records_fields_config()
         try:
             # create index
             index_settings = {
@@ -144,16 +147,14 @@ class ElasticSearchWrapper(object):
             # create mappings for each type
 
             # mapping for records
-            self.create_mapping(index, self.records_doc_type)
+            self.create_mapping(index, self.records_doc_type, configuration)
 
             return True
         except:
             raise
             return False
 
-    def create_mapping(self, index, doc_type):
-        from invenio.ext.elasticsearch.config import es_config
-        mapping_cfg = es_config.get_records_fields_config()
+    def create_mapping(self, index, doc_type, mapping_cfg):
         try:
             self.connection.indices.put_mapping(index=index, doc_type=doc_type,
                                                 body=mapping_cfg)
@@ -246,6 +247,22 @@ class ElasticSearchWrapper(object):
                 docs = []
         errors += self._bulk_index_docs(docs, doc_type=doc_type, index=index)
         return errors
+
+    def delete_documents(self, recids, doc_type, index):
+        query = {"query": {"bool": {"should": ""}}}
+        query["query"]["bool"]["should"] = map(lambda x: {"term": {"_id":x}},
+                                               recids)
+        return self.connection.delete_by_query(index=index, doc_type=doc_type,
+                                               body=query)
+
+    def delete_all(self, doc_type=None, index=None):
+        if not doc_type:
+            doc_type = self.records_doc_type
+        if not index:
+            index = self.app.config['ELASTICSEARCH_INDEX']
+        query = {"query": {"match_all": {}}}
+        return self.connection.delete_by_query(index=index, doc_type=doc_type,
+                                               body=query)
 
     def search(self, query, index="invenio", doc_type="records", filters=None):
         """ query: the users' query

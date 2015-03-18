@@ -82,7 +82,9 @@ class IndexerManager(object):
             self.index_factory = NativeIndex
             self.engine = NativeIndexerConfigurationEngine
 
-        self.config = self._load_configuration()
+        #self.config = self._load_configuration()
+        self.config = None
+        self.engine = self.engine(self.config)
 
     def _load_config(self, filename=None):
         """Load the configuration.
@@ -106,7 +108,7 @@ class IndexerManager(object):
         """Load configuration."""
         importer = JsonIndexerConfigurationImporter(
             json_text=self.data,
-            factory=self.factory
+            factory=self.index_factory
         )
         # TODO give the possibility to choice the importer
         return importer.load()

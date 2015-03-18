@@ -269,33 +269,27 @@ class IndexerConfigurationEngine(object):
         """
         self.index_configuration = index_configuration
 
-    @abstractmethod
-    def create():
+    def create(self):
         """Execute actions to create indices on a specific indexer."""
         raise NotImplementedError()
 
-    @abstractmethod
-    def drop():
+    def drop(self):
         """Execute actions to drop indices on a specific indexer."""
         raise NotImplementedError()
 
-    @abstractmethod
-    def recreate():
+    def recreate(self):
         """Execute actions to recreate indices on a specific indexer."""
         raise NotImplementedError()
 
-    @abstractmethod
-    def clear():
+    def clear(self):
         """Execute actions to clear indices on a specific indexer."""
         raise NotImplementedError()
 
-    @abstractmethod
-    def index():
+    def index(self):
         """Execute actions to start indexing on a specific indexer."""
         raise NotImplementedError()
 
-    @abstractmethod
-    def reindex():
+    def reindex(self):
         """Execute actions to start reindexing on a specific indexer."""
         raise NotImplementedError()
 
@@ -306,5 +300,24 @@ class NativeIndexerConfigurationEngine(IndexerConfigurationEngine):
 
 
 class ElasticSearchIndexerConfigurationEngine(IndexerConfigurationEngine):
-
     """Engine for Elastic Search configuration."""
+    def __init__(self, index_configuration):
+        super(ElasticSearchIndexerConfigurationEngine,
+              self).__init__(index_configuration)
+        from flask import current_app
+        self.es = current_app.extensions.get("elasticsearch")
+
+
+    def create(self):
+        #FIXME pass the configuration as the named parameter "configuration"
+        self.es.create_index()
+
+    def drop(self):
+        self.es.delete_index()
+
+    def recreate(self):
+        self.es.create_index()
+        self.es.delete_index()
+
+    def clear(self):
+        self.es.delete_all()
