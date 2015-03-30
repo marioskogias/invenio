@@ -3,7 +3,7 @@
 from backend import ElasticSearchWrapper
 from query_handler import QueryHandler
 from results_handler import ResultsHandler
-
+from record_enhancer import Enhancer
 
 def index_record(sender, recid):
     """
@@ -14,6 +14,9 @@ def index_record(sender, recid):
     :param recid: [int] recid to index
     """
     from .tasks import index_records
+    with open("/root/log.log", 'a') as f:
+        f.write(str(recid))
+        f.write("\n")
     return index_records.delay(sender, recid)
 
 
@@ -34,13 +37,13 @@ def setup_app(app):
     es = ElasticSearchWrapper(app)
 
     # initiate the query handler
-    es.set_query_handler(QueryHandler())
+    es.set_query_handler_class(QueryHandler)
 
     # initiate the results handler
-    es.set_results_handler(ResultsHandler())
+    es.set_results_handler_class(ResultsHandler)
 
     # initiate the enhancer FIXME initiate it here
-    # es.set_enhancer(Enhancer())
+    es.set_enhancer_class(Enhancer)
 
     packages = app.extensions["registry"]["packages"]
     packages.register("invenio.ext.elasticsearch")

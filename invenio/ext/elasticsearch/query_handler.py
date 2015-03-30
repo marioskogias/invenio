@@ -1,9 +1,9 @@
 """This file is responsible for formating the elasticsearch query using the
    invenio_query_parser
 """
-from invenio_query_parser.walkers.pypeg_to_ast import PypegConverter
-from invenio_query_parser import parser
-from ast_to_dsl import ASTtoDSLConverter
+from invenio_query_parser.contrib.spires.walkers import spires_to_invenio
+from invenio_query_parser.contrib.spires import converter
+from invenio.modules.search.walkers.elasticsearch import ElasticSearchDSL
 from config import es_config
 from config import query_mapping
 from pypeg2 import *
@@ -12,22 +12,19 @@ from pypeg2 import *
 class QueryHandler(object):
 
     def __init__(self):
-        self.astCreator = PypegConverter()
-        self.dslCreator = ASTtoDSLConverter(query_mapping.fields)
+        self.astCreator = converter.SpiresToInvenioSyntaxConverter()
+        self.spires_to_invenio_walker = spires_to_invenio.SpiresToInvenio()
+        self.dslCreator = ElasticSearchDSL()
 
     def get_dsl_query(self, query):
         if query == "*":  # this is what the UI returns FIXME
             return {"match_all": {}}
-        peg = parse(query, parser.Main, whitespace="")
-        ast = peg.accept(self.astCreator)
-        dsl_query = ast.accept(self.dslCreator)
+        ast = self.astCreator.parse_query(query)
+        print ast
+        new_ast = ast.accept(self.spires_to_invenio_walker)
+        print new_ast
+        dsl_query = new_ast.accept(self.dslCreator)
         return dsl_query
-
-    def get_doc_type(self, query):
-        """For now on only records
-            Do we need more types?
-        """
-        pass
 
     def get_permitted_restricted_colleciton(self):
         """Return a tuple of lists
@@ -51,6 +48,14 @@ class QueryHandler(object):
         no_cols = self.get_permitted_restricted_colleciton()
         must_not_f = {"_collections": no_cols}
         return must_not_f
+
+    def format_facet_filters(self, facet_filters):
+        def _f(ffilter):
+            for k,v in ffilter.iteritems():
+                real_k = es_config.get_records_facets_config()\
+                        .get(k)['terms']['field']
+                return {real_k: v}
+        return map(_f, facet_filters)
 
     def format_filters(self, must_f, should_f, must_not_f):
         """Accepts three list of dictionaries
@@ -85,7 +90,7 @@ class QueryHandler(object):
     def format_query(self, query, user_filters=None):
         # FIXME handle the given filters
         must_not = self.format_collection_filters()
-        filters = self.format_filters([], [], [must_not])
+        filters = self.format_filters(user_filters, [], [must_not])
 
         dsl_query = {"query": query}
         if filters:
@@ -101,11 +106,9 @@ class QueryHandler(object):
         dsl_query["aggs"] = es_config.get_records_facets_config()
         dsl_query["highlight"] = es_config.get_records_highlights_config()
         dsl_query["_source"] = es_config.should_return_source
-        import json
-        print json.dumps(dsl_query)
         return dsl_query
 
-    def process_query(self, query, filters):
+    def process_query(self, query, facet_filters):
         dsl_query = self.get_dsl_query(query)
-        doc_type = self.get_doc_type(dsl_query)
-        return self.format_query(dsl_query, filters)
+        facet_filters = self.format_facet_filters(facet_filters)
+        return self.format_query(dsl_query, facet_filters)

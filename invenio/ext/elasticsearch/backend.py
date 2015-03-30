@@ -8,7 +8,7 @@
 
 from werkzeug.utils import cached_property
 from elasticsearch import Elasticsearch
-from record_enhancer import Enhancer
+from config.query_mapping import fields
 import json
 
 
@@ -17,14 +17,34 @@ class ElasticSearchWrapper(object):
     def __init__(self, app=None):
         """Build the extension object."""
         self.app = app
+        self._query_handler = None
+        self._results_handler = None
+        self._enhancer = None
 
         # TODO: to put in config?
         self.records_doc_type = "records"
         self.documents_doc_type = "documents"
 
-        self.enhancer = None
         if app is not None:
             self.init_app(app)
+
+    @property
+    def query_handler(self):
+        if not self._query_handler:
+            self._query_handler = self._query_handler_class()
+        return self._query_handler
+
+    @property
+    def results_handler(self):
+        if not self._results_handler:
+            self._results_handler = self._results_handler_class()
+        return self._results_handler
+
+    @property
+    def enhancer(self):
+        if not self._enhancer:
+            self._enhancer = self._enhancer_class()
+        return self._enhancer
 
     def init_app(self, app):
         """
@@ -32,8 +52,9 @@ class ElasticSearchWrapper(object):
 
         Only one Registry per application is allowed.
         """
+        app.config.setdefault("SEARCH_ELASTIC_KEYWORD_MAPPING", fields)
         app.config.setdefault('ELASTICSEARCH_URL',
-                              'http://188.184.141.134:9200/')
+                              'http://invenio-elasticsearch:9200/')
         app.config.setdefault('ELASTICSEARCH_INDEX', "invenio")
         app.config.setdefault('ELASTICSEARCH_NUMBER_OF_SHARDS', 1)
         app.config.setdefault('ELASTICSEARCH_NUMBER_OF_REPLICAS', 0)
@@ -49,26 +70,27 @@ class ElasticSearchWrapper(object):
 
         app.extensions['elasticsearch'] = self
 
-    def set_query_handler(self, handler):
+    def set_query_handler_class(self, handler_class):
         """
-        Specify a function to convert the invenio query into a ES query.
+        Specify a class responsible to convert the invenio query into a ES
+        query. Initiate the object only when needed.
 
-        :param handler: [function] take a query[string] parameter
+        :param handler_class: [Class]
         """
-        self.query_handler = handler
+        self._query_handler_class = handler_class
 
-    def set_results_handler(self, handler):
+    def set_results_handler_class(self, handler):
         """
-        Set a function to process the search results.
+        Set a class to process the search results.
 
         To convert ES search results into an object understandable by Invenio.
 
-        :param handler: [function] take a query[string] parameter
+        :param handler: [Class]
         """
-        self.results_handler = handler
+        self._results_handler_class = handler
 
-    def set_enhancer(self, enhancer):
-        self.enhancer = enhancer
+    def set_enhancer_class(self, enhancer):
+        self._enhancer_class = enhancer
 
     @cached_property
     def connection(self):
@@ -187,8 +209,6 @@ class ElasticSearchWrapper(object):
     def _get_record(self, recid):
         from invenio.modules.records.api import get_record
         record_as_dict = get_record(recid, reset_cache=True).dumps()
-        if not self.enhancer:
-            self.enhancer = Enhancer()
         enhanced_record = self.enhancer.enhance_rec_content(record_as_dict)
         return enhanced_record
 
@@ -247,15 +267,17 @@ class ElasticSearchWrapper(object):
         errors += self._bulk_index_docs(docs, doc_type=doc_type, index=index)
         return errors
 
-    def search(self, query, index="invenio", doc_type="records", filters=None):
+    def search(self, query, index="invenio", doc_type="records",
+               facet_filters=None):
         """ query: the users' query
             index: where to search
             filters: a dictionary of filters eg {"collections": "ARTICLE"}
         """
 
         # create elasticsearch query
-        dsl_query = self.query_handler.process_query(query, filters)
-
+        dsl_query = self.query_handler.process_query(query, facet_filters)
+        with open("/root/es.log", 'a') as f:
+            f.write("The dsl-query is " + str(dsl_query))
         results = self.connection.search(body=dsl_query, index=index,
                                          doc_type=doc_type)
 

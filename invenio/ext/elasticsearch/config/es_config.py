@@ -20,7 +20,7 @@
 """General config file for ES index."""
 
 from invenio.modules.jsonalchemy.parser import FieldParser
-
+import elasticsearch_cfg as es_cfg
 should_return_source = False
 
 ################ Fields ###############
@@ -28,42 +28,18 @@ should_return_source = False
 
 def get_records_fields_config():
     """Mapping for records."""
-    fields = FieldParser.field_definitions('recordext')
-    mapping = {}
-    for name, value in fields.iteritems():
-        current_mapping = value.get("elasticsearch", {}).get("mapping")
-        if current_mapping:
-            field_mapping = {name: current_mapping}
-            mapping.update(field_mapping)
-    record_mappings = {"records": {"properties": mapping}}
-    return record_mappings
+    return es_cfg.mapping
 
 
 ################ Highlights ###############
 
 def get_records_highlights_config():
-    """Get hilights config for records."""
-    fields = FieldParser.field_definitions('recordext')
-    highlights = {}
-    for name, value in fields.iteritems():
-        current_highlights = value.get("elasticsearch", {}).get("highlights")
-        if current_highlights:
-            highlights.update(current_highlights)
-    config = {
-        "fields": highlights
-    }
-    return config
+    """Highlighted fields"""
+    return es_cfg.highlight
 
 
 ################ Facets ###############
 
 def get_records_facets_config():
     """Get facets config for records."""
-    from invenio.modules.jsonalchemy.parser import FieldParser
-    fields = FieldParser.field_definitions('recordext')
-    facets = {}
-    for name, value in fields.iteritems():
-        current_facet = value.get("elasticsearch", {}).get("facets")
-        if current_facet:
-            facets.update(current_facet)
-    return facets
+    return es_cfg.facets

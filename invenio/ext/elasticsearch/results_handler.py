@@ -10,6 +10,7 @@ class Response(object):
     """
     def __init__(self, data):
         """New Response instance."""
+        print data
         self.data = data
         self.hits = Hits(data)
         self.facets = Facets(data)

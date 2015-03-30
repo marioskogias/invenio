@@ -37,6 +37,7 @@ class Enhancer(object):
            Here we will add all the calculated fields
         """
         del record["__meta_metadata__"]
+        '''
         # FIXME handle mutliple collection types
         try:
             collections = [val.values()[0]
@@ -60,9 +61,8 @@ class Enhancer(object):
             print "Record %s doesn't have %s" % (record["_id"], e)
 
         # get full text if any
+        '''
         try:
-            record['documents'] = self._get_text(record["_id"])
-
             # Create name iterations
             def _add_variations(x):
                 name = x['full_name']
@@ -74,5 +74,4 @@ class Enhancer(object):
 
         except KeyError as e:
             print "Record %s doesn't have %s" % (record["_id"], e)
-
         return record
