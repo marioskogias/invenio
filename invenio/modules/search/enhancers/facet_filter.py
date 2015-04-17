@@ -26,7 +26,7 @@ from itertools import groupby
 from six import iteritems
 
 from invenio_query_parser.ast import (
-        AndOp, OrOp, NotOp, KeywordOp, Keyword, Value
+        AndOp, OrOp, NotOp, KeywordOp, Keyword, Value, DoubleQuotedValue
 )
 
 """This enhancer enhancers the search query with the facet filters that are
@@ -36,7 +36,7 @@ send as part of the HTTP request.
 
 def kw_formatter(key, val):
     """Format the operation that is part or the bool expressions"""
-    return KeywordOp(Keyword(key), Value(val))
+    return KeywordOp(Keyword(key), DoubleQuotedValue(val))
 
 
 def get_groupped_facets(filter_data):

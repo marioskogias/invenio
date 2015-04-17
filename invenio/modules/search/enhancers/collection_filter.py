@@ -19,7 +19,7 @@
 
 from invenio.base.globals import cfg
 from invenio_query_parser.ast import (
-        AndOp, OrOp, NotOp, KeywordOp, Keyword, Value
+        AndOp, OrOp, NotOp, KeywordOp, Keyword, Value, DoubleQuotedValue
 )
 
 """This enhancer enhancers the search query filtering the results based on the
@@ -29,7 +29,7 @@ the user has access to.
 
 
 def kw_formatter(val):
-    return KeywordOp(Keyword("collection"), Value(val))
+    return KeywordOp(Keyword("_collections"), DoubleQuotedValue(val))
 
 
 def create_collection_query(restricted_cols, permitted_restricted_cols,

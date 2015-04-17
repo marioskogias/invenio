@@ -3,11 +3,16 @@
 """
 from invenio_query_parser.contrib.spires.walkers import spires_to_invenio
 from invenio_query_parser.contrib.spires import converter
+from invenio_query_parser.ast import AndOp
 from invenio.modules.search.walkers.elasticsearch import ElasticSearchDSL
+from invenio.modules.search.enhancers import facet_filter, collection_filter
+from invenio.base.globals import cfg
 from config import es_config
 from config import query_mapping
 from pypeg2 import *
+from six import iteritems
 
+CONFIGURED_FACETS = ["_collections", "_first_author.full_name.raw"]
 
 class QueryHandler(object):
 
@@ -17,90 +22,58 @@ class QueryHandler(object):
         self.dslCreator = ElasticSearchDSL()
 
     def get_dsl_query(self, query):
-        if query == "*":  # this is what the UI returns FIXME
-            return {"match_all": {}}
-        ast = self.astCreator.parse_query(query)
-        print ast
-        new_ast = ast.accept(self.spires_to_invenio_walker)
-        print new_ast
-        dsl_query = new_ast.accept(self.dslCreator)
+        dsl_query = query.accept(self.dslCreator)
         return dsl_query
 
-    def get_permitted_restricted_colleciton(self):
-        """Return a tuple of lists
-            This first list contains the allowed collections
-            Ths second list contains the forbiden collections
-        """
-        from flask.ext.login import current_user
-        allowed_from_restricted = current_user.get("precached_permitted_\
-                restricted_collections", [])
-        print allowed_from_restricted
+    def get_query_ast(self, query):
+        if query == "*":  # this is what the UI returns FIXME
+            query = ""
+        ast = self.astCreator.parse_query(query)
+        new_ast = ast.accept(self.spires_to_invenio_walker)
+        return new_ast
 
-        from invenio.modules.collections.cache import \
-                restricted_collection_cache
-        restricted = restricted_collection_cache.cache
-        print restricted
+    def enhance_query(self):
 
-        final_restricted = list(set(restricted) - set(allowed_from_restricted))
-        return final_restricted
+        res = self.query
 
-    def format_collection_filters(self):
-        no_cols = self.get_permitted_restricted_colleciton()
-        must_not_f = {"_collections": no_cols}
-        return must_not_f
+        # Apply the facet filters
+        self.format_facet_filters()
 
-    def format_facet_filters(self, facet_filters):
-        def _f(ffilter):
-            for k,v in ffilter.iteritems():
-                real_k = es_config.get_records_facets_config()\
-                        .get(k)['terms']['field']
-                return {real_k: v}
-        return map(_f, facet_filters)
+        filter_data = facet_filter.get_groupped_facets(self.facet_filters)
+        new_nodes = facet_filter.format_facet_tree_nodes(filter_data,
+                                                         CONFIGURED_FACETS)
+        if new_nodes:
+            res = AndOp(new_nodes, self.query)
 
-    def format_filters(self, must_f, should_f, must_not_f):
-        """Accepts three list of dictionaries
-           Each dictionary is a filter
-           At first only term filters are supported
-        """
-        def _handle_filters(x):
-            # x is a dictionary with a single key-value pair
-            value = x.values()[0]
-            if isinstance(value, list):
-                if value:
-                    return {"terms": x}
-                return None
-            else:
-                return {"term": x}
+        # Apply the collection restriction filters
+        from invenio.modules.collections.cache import restricted_collection_cache
+        from flask_login import current_user as user_info
+        policy = cfg['CFG_WEBSEARCH_VIEWRESTRCOLL_POLICY'].strip().upper()
+        restricted_cols = restricted_collection_cache.cache
+        permitted_restricted_cols = user_info.get('precached_permitted_\
+            restricted_collections', [])
+        current_col = cfg['CFG_SITE_NAME']
+        collection_tree = collection_filter.create_collection_query(\
+                restricted_cols, permitted_restricted_cols,
+                current_col, policy)
 
-        must_filters = filter(None, map(_handle_filters, must_f))
-        should_filters = filter(None, map(_handle_filters, should_f))
-        must_not_filters = filter(None, map(_handle_filters, must_not_f))
+        if collection_tree:
+            res = AndOp(collection_tree, res)
+        return res
 
-        if must_filters or should_filters or must_not_filters:
-            res = {"bool":{}}
-            if must_filters:
-                res["bool"]["must"] = must_filters
-            if should_filters:
-                res["bool"]["should"] = should_filters
-            if must_not_filters:
-                res["bool"]["must_not"] = must_not_filters
-            return res
-        return {}
+    def format_facet_filters(self):
+        facet_list = []
+        for item in self.facet_filters:
+            for k,v in iteritems(item):
+                real_key = es_config.get_records_facets_config().get(k, None)
+                if real_key:
+                    facet_list.append(['+', real_key['terms']['field'], v])
+        self.facet_filters = facet_list
 
-    def format_query(self, query, user_filters=None):
-        # FIXME handle the given filters
-        must_not = self.format_collection_filters()
-        filters = self.format_filters(user_filters, [], [must_not])
+
+    def format_query(self, query):
 
         dsl_query = {"query": query}
-        if filters:
-            dsl_query = {"query": {
-                "filtered": {
-                    "query": query,
-                    "filter":filters
-                    }
-                }
-            }
 
         # apply aggegation for facets
         dsl_query["aggs"] = es_config.get_records_facets_config()
@@ -109,6 +82,14 @@ class QueryHandler(object):
         return dsl_query
 
     def process_query(self, query, facet_filters):
-        dsl_query = self.get_dsl_query(query)
-        facet_filters = self.format_facet_filters(facet_filters)
-        return self.format_query(dsl_query, facet_filters)
+        self._query = query
+        self.facet_filters = facet_filters
+
+        self.query = self.get_query_ast(query)
+
+        enhanced_query = self.enhance_query()
+        with open("/root/invenio.log", 'a') as f:
+            f.write(str(enhanced_query))
+            f.write("\n")
+        dsl_query = self.get_dsl_query(enhanced_query)
+        return self.format_query(dsl_query)
